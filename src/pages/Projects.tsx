@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { useStore } from '@/store/useStore';
-import { Project, ProjectStatus, PaymentStructure } from '@/types';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,9 +21,27 @@ import {
 } from '@/components/ui/select';
 import { Plus, Pencil, Trash2, Search } from 'lucide-react';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
+
+type ProjectStatus = 'Active' | 'Completed' | 'On Hold';
+type PaymentStructure = 'Single payment' | 'Milestones';
+
+interface Project {
+  id: string;
+  name: string;
+  client_name: string;
+  start_date: string;
+  end_date: string | null;
+  total_budget: number;
+  payment_structure: string;
+  status: string;
+  notes: string | null;
+}
 
 export function Projects() {
-  const { projects, addProject, updateProject, deleteProject } = useStore();
+  const { user } = useAuth();
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -31,47 +49,75 @@ export function Projects() {
 
   const [formData, setFormData] = useState({
     name: '',
-    clientName: '',
-    startDate: '',
-    endDate: '',
-    totalBudget: '',
-    paymentStructure: 'Single payment' as PaymentStructure,
+    client_name: '',
+    start_date: '',
+    end_date: '',
+    total_budget: '',
+    payment_structure: 'Single payment' as PaymentStructure,
     status: 'Active' as ProjectStatus,
     notes: '',
   });
 
+  useEffect(() => {
+    if (user) fetchProjects();
+  }, [user]);
+
+  const fetchProjects = async () => {
+    setLoading(true);
+    const { data, error } = await supabase.from('projects').select('*').order('created_at', { ascending: false });
+    if (error) {
+      toast.error('Failed to load projects');
+    } else {
+      setProjects(data || []);
+    }
+    setLoading(false);
+  };
+
   const resetForm = () => {
     setFormData({
       name: '',
-      clientName: '',
-      startDate: '',
-      endDate: '',
-      totalBudget: '',
-      paymentStructure: 'Single payment',
+      client_name: '',
+      start_date: '',
+      end_date: '',
+      total_budget: '',
+      payment_structure: 'Single payment',
       status: 'Active',
       notes: '',
     });
     setEditingProject(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const projectData: Project = {
-      id: editingProject?.id || crypto.randomUUID(),
+    
+    const projectData = {
+      user_id: user!.id,
       name: formData.name,
-      clientName: formData.clientName,
-      startDate: formData.startDate,
-      endDate: formData.endDate,
-      totalBudget: parseFloat(formData.totalBudget) || 0,
-      paymentStructure: formData.paymentStructure,
+      client_name: formData.client_name,
+      start_date: formData.start_date,
+      end_date: formData.end_date || null,
+      total_budget: parseFloat(formData.total_budget) || 0,
+      payment_structure: formData.payment_structure,
       status: formData.status,
-      notes: formData.notes,
+      notes: formData.notes || null,
     };
 
     if (editingProject) {
-      updateProject(editingProject.id, projectData);
+      const { error } = await supabase.from('projects').update(projectData).eq('id', editingProject.id);
+      if (error) {
+        toast.error('Failed to update project');
+      } else {
+        toast.success('Project updated');
+        fetchProjects();
+      }
     } else {
-      addProject(projectData);
+      const { error } = await supabase.from('projects').insert(projectData);
+      if (error) {
+        toast.error('Failed to create project');
+      } else {
+        toast.success('Project created');
+        fetchProjects();
+      }
     }
     setIsOpen(false);
     resetForm();
@@ -81,20 +127,30 @@ export function Projects() {
     setEditingProject(project);
     setFormData({
       name: project.name,
-      clientName: project.clientName,
-      startDate: project.startDate,
-      endDate: project.endDate,
-      totalBudget: project.totalBudget.toString(),
-      paymentStructure: project.paymentStructure,
-      status: project.status,
-      notes: project.notes,
+      client_name: project.client_name,
+      start_date: project.start_date,
+      end_date: project.end_date || '',
+      total_budget: project.total_budget.toString(),
+      payment_structure: project.payment_structure as PaymentStructure,
+      status: project.status as ProjectStatus,
+      notes: project.notes || '',
     });
     setIsOpen(true);
   };
 
+  const handleDelete = async (id: string) => {
+    const { error } = await supabase.from('projects').delete().eq('id', id);
+    if (error) {
+      toast.error('Failed to delete project');
+    } else {
+      toast.success('Project deleted');
+      fetchProjects();
+    }
+  };
+
   const filteredProjects = projects.filter((project) => {
     const matchesSearch = project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      project.clientName.toLowerCase().includes(searchTerm.toLowerCase());
+      project.client_name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || project.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -107,14 +163,22 @@ export function Projects() {
     }).format(amount);
   };
 
-  const getStatusBadge = (status: ProjectStatus) => {
-    const styles = {
+  const getStatusBadge = (status: string) => {
+    const styles: Record<string, string> = {
       'Active': 'badge-status badge-active',
       'Completed': 'badge-status badge-paid',
       'On Hold': 'badge-status badge-partial',
     };
-    return <span className={styles[status]}>{status}</span>;
+    return <span className={styles[status] || 'badge-status'}>{status}</span>;
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="animate-fade-in">
@@ -138,64 +202,32 @@ export function Projects() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Project Name</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    required
-                  />
+                  <Input id="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="clientName">Client Name</Label>
-                  <Input
-                    id="clientName"
-                    value={formData.clientName}
-                    onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
-                    required
-                  />
+                  <Label htmlFor="client_name">Client Name</Label>
+                  <Input id="client_name" value={formData.client_name} onChange={(e) => setFormData({ ...formData, client_name: e.target.value })} required />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="startDate">Start Date</Label>
-                  <Input
-                    id="startDate"
-                    type="date"
-                    value={formData.startDate}
-                    onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                    required
-                  />
+                  <Label htmlFor="start_date">Start Date</Label>
+                  <Input id="start_date" type="date" value={formData.start_date} onChange={(e) => setFormData({ ...formData, start_date: e.target.value })} required />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="endDate">End Date</Label>
-                  <Input
-                    id="endDate"
-                    type="date"
-                    value={formData.endDate}
-                    onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                  />
+                  <Label htmlFor="end_date">End Date</Label>
+                  <Input id="end_date" type="date" value={formData.end_date} onChange={(e) => setFormData({ ...formData, end_date: e.target.value })} />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="totalBudget">Total Budget (₦)</Label>
-                  <Input
-                    id="totalBudget"
-                    type="number"
-                    value={formData.totalBudget}
-                    onChange={(e) => setFormData({ ...formData, totalBudget: e.target.value })}
-                    required
-                  />
+                  <Label htmlFor="total_budget">Total Budget (₦)</Label>
+                  <Input id="total_budget" type="number" value={formData.total_budget} onChange={(e) => setFormData({ ...formData, total_budget: e.target.value })} required />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="paymentStructure">Payment Structure</Label>
-                  <Select
-                    value={formData.paymentStructure}
-                    onValueChange={(value: PaymentStructure) => setFormData({ ...formData, paymentStructure: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
+                  <Label htmlFor="payment_structure">Payment Structure</Label>
+                  <Select value={formData.payment_structure} onValueChange={(value: PaymentStructure) => setFormData({ ...formData, payment_structure: value })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Single payment">Single payment</SelectItem>
                       <SelectItem value="Milestones">Milestones</SelectItem>
@@ -205,13 +237,8 @@ export function Projects() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="status">Status</Label>
-                <Select
-                  value={formData.status}
-                  onValueChange={(value: ProjectStatus) => setFormData({ ...formData, status: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                <Select value={formData.status} onValueChange={(value: ProjectStatus) => setFormData({ ...formData, status: value })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Active">Active</SelectItem>
                     <SelectItem value="Completed">Completed</SelectItem>
@@ -221,41 +248,24 @@ export function Projects() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="notes">Notes</Label>
-                <Textarea
-                  id="notes"
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  rows={3}
-                />
+                <Textarea id="notes" value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} rows={3} />
               </div>
               <div className="flex justify-end gap-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => { setIsOpen(false); resetForm(); }}>
-                  Cancel
-                </Button>
-                <Button type="submit">
-                  {editingProject ? 'Update' : 'Create'} Project
-                </Button>
+                <Button type="button" variant="outline" onClick={() => { setIsOpen(false); resetForm(); }}>Cancel</Button>
+                <Button type="submit">{editingProject ? 'Update' : 'Create'} Project</Button>
               </div>
             </form>
           </DialogContent>
         </Dialog>
       </div>
 
-      {/* Filters */}
       <div className="flex gap-4 mb-6">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Search projects..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9"
-          />
+          <Input placeholder="Search projects..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" />
         </div>
         <Select value={statusFilter} onValueChange={(value: ProjectStatus | 'all') => setStatusFilter(value)}>
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="Filter by status" />
-          </SelectTrigger>
+          <SelectTrigger className="w-40"><SelectValue placeholder="Filter by status" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
             <SelectItem value="Active">Active</SelectItem>
@@ -265,7 +275,6 @@ export function Projects() {
         </Select>
       </div>
 
-      {/* Table */}
       <div className="bg-card rounded-xl border border-border overflow-hidden">
         {filteredProjects.length === 0 ? (
           <div className="p-12 text-center">
@@ -288,22 +297,18 @@ export function Projects() {
               {filteredProjects.map((project) => (
                 <tr key={project.id}>
                   <td className="font-medium">{project.name}</td>
-                  <td>{project.clientName}</td>
+                  <td>{project.client_name}</td>
                   <td className="text-muted-foreground">
-                    {format(new Date(project.startDate), 'MMM d, yyyy')}
-                    {project.endDate && ` - ${format(new Date(project.endDate), 'MMM d, yyyy')}`}
+                    {format(new Date(project.start_date), 'MMM d, yyyy')}
+                    {project.end_date && ` - ${format(new Date(project.end_date), 'MMM d, yyyy')}`}
                   </td>
-                  <td className="font-semibold text-primary">{formatCurrency(project.totalBudget)}</td>
-                  <td>{project.paymentStructure}</td>
+                  <td className="font-semibold text-primary">{formatCurrency(Number(project.total_budget))}</td>
+                  <td>{project.payment_structure}</td>
                   <td>{getStatusBadge(project.status)}</td>
                   <td>
                     <div className="flex gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => handleEdit(project)}>
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => deleteProject(project.id)}>
-                        <Trash2 className="w-4 h-4 text-destructive" />
-                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleEdit(project)}><Pencil className="w-4 h-4" /></Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleDelete(project.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
                     </div>
                   </td>
                 </tr>
