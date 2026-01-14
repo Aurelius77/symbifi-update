@@ -182,24 +182,24 @@ export function Projects() {
 
   return (
     <div className="animate-fade-in">
-      <div className="page-header flex items-center justify-between">
+      <div className="page-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="page-title">Projects</h1>
           <p className="page-description">Manage your client projects and budgets</p>
         </div>
         <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) resetForm(); }}>
           <DialogTrigger asChild>
-            <Button className="gap-2">
+            <Button className="gap-2 w-full sm:w-auto">
               <Plus className="w-4 h-4" />
               Add Project
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent className="max-w-[95vw] sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingProject ? 'Edit Project' : 'Add New Project'}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Project Name</Label>
                   <Input id="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
@@ -209,7 +209,7 @@ export function Projects() {
                   <Input id="client_name" value={formData.client_name} onChange={(e) => setFormData({ ...formData, client_name: e.target.value })} required />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="start_date">Start Date</Label>
                   <Input id="start_date" type="date" value={formData.start_date} onChange={(e) => setFormData({ ...formData, start_date: e.target.value })} required />
@@ -219,7 +219,7 @@ export function Projects() {
                   <Input id="end_date" type="date" value={formData.end_date} onChange={(e) => setFormData({ ...formData, end_date: e.target.value })} />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="total_budget">Total Budget (₦)</Label>
                   <Input id="total_budget" type="number" value={formData.total_budget} onChange={(e) => setFormData({ ...formData, total_budget: e.target.value })} required />
@@ -250,22 +250,22 @@ export function Projects() {
                 <Label htmlFor="notes">Notes</Label>
                 <Textarea id="notes" value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} rows={3} />
               </div>
-              <div className="flex justify-end gap-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => { setIsOpen(false); resetForm(); }}>Cancel</Button>
-                <Button type="submit">{editingProject ? 'Update' : 'Create'} Project</Button>
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-4">
+                <Button type="button" variant="outline" onClick={() => { setIsOpen(false); resetForm(); }} className="w-full sm:w-auto">Cancel</Button>
+                <Button type="submit" className="w-full sm:w-auto">{editingProject ? 'Update' : 'Create'} Project</Button>
               </div>
             </form>
           </DialogContent>
         </Dialog>
       </div>
 
-      <div className="flex gap-4 mb-6">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input placeholder="Search projects..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" />
         </div>
         <Select value={statusFilter} onValueChange={(value: ProjectStatus | 'all') => setStatusFilter(value)}>
-          <SelectTrigger className="w-40"><SelectValue placeholder="Filter by status" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-40"><SelectValue placeholder="Filter by status" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
             <SelectItem value="Active">Active</SelectItem>
@@ -275,48 +275,82 @@ export function Projects() {
         </Select>
       </div>
 
-      <div className="bg-card rounded-xl border border-border overflow-hidden">
-        {filteredProjects.length === 0 ? (
-          <div className="p-12 text-center">
-            <p className="text-muted-foreground">No projects found. Add your first project to get started.</p>
-          </div>
-        ) : (
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Project Name</th>
-                <th>Client</th>
-                <th>Duration</th>
-                <th>Budget</th>
-                <th>Structure</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredProjects.map((project) => (
-                <tr key={project.id}>
-                  <td className="font-medium">{project.name}</td>
-                  <td>{project.client_name}</td>
-                  <td className="text-muted-foreground">
-                    {format(new Date(project.start_date), 'MMM d, yyyy')}
-                    {project.end_date && ` - ${format(new Date(project.end_date), 'MMM d, yyyy')}`}
-                  </td>
-                  <td className="font-semibold text-primary">{formatCurrency(Number(project.total_budget))}</td>
-                  <td>{project.payment_structure}</td>
-                  <td>{getStatusBadge(project.status)}</td>
-                  <td>
-                    <div className="flex gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => handleEdit(project)}><Pencil className="w-4 h-4" /></Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDelete(project.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
-                    </div>
-                  </td>
+      {filteredProjects.length === 0 ? (
+        <div className="bg-card rounded-xl border border-border p-12 text-center">
+          <p className="text-muted-foreground">No projects found. Add your first project to get started.</p>
+        </div>
+      ) : (
+        <>
+          {/* Desktop Table */}
+          <div className="hidden lg:block bg-card rounded-xl border border-border overflow-hidden">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Project Name</th>
+                  <th>Client</th>
+                  <th>Duration</th>
+                  <th>Budget</th>
+                  <th>Structure</th>
+                  <th>Status</th>
+                  <th>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+              </thead>
+              <tbody>
+                {filteredProjects.map((project) => (
+                  <tr key={project.id}>
+                    <td className="font-medium">{project.name}</td>
+                    <td>{project.client_name}</td>
+                    <td className="text-muted-foreground">
+                      {format(new Date(project.start_date), 'MMM d, yyyy')}
+                      {project.end_date && ` - ${format(new Date(project.end_date), 'MMM d, yyyy')}`}
+                    </td>
+                    <td className="font-semibold text-primary">{formatCurrency(Number(project.total_budget))}</td>
+                    <td>{project.payment_structure}</td>
+                    <td>{getStatusBadge(project.status)}</td>
+                    <td>
+                      <div className="flex gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => handleEdit(project)}><Pencil className="w-4 h-4" /></Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleDelete(project.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile Cards */}
+          <div className="lg:hidden grid gap-4">
+            {filteredProjects.map((project) => (
+              <div key={project.id} className="bg-card rounded-xl border border-border p-4 space-y-3">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="font-semibold">{project.name}</h3>
+                    <p className="text-sm text-muted-foreground">{project.client_name}</p>
+                  </div>
+                  {getStatusBadge(project.status)}
+                </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-lg font-bold text-primary">{formatCurrency(Number(project.total_budget))}</p>
+                  <span className="text-xs text-muted-foreground">{project.payment_structure}</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {format(new Date(project.start_date), 'MMM d, yyyy')}
+                  {project.end_date && ` - ${format(new Date(project.end_date), 'MMM d, yyyy')}`}
+                </p>
+                <div className="flex gap-2 pt-2 border-t border-border">
+                  <Button variant="outline" size="sm" onClick={() => handleEdit(project)} className="flex-1">
+                    <Pencil className="w-4 h-4 mr-1" /> Edit
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => handleDelete(project.id)}>
+                    <Trash2 className="w-4 h-4 text-destructive" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
 import { Sidebar } from './Sidebar';
+import { MobileNav } from './MobileNav';
 
 interface LayoutProps {
   children: ReactNode;
@@ -8,9 +9,17 @@ interface LayoutProps {
 export function Layout({ children }: LayoutProps) {
   return (
     <div className="min-h-screen bg-background">
-      <Sidebar />
-      <main className="ml-64 min-h-screen">
-        <div className="p-8">
+      {/* Mobile Navigation */}
+      <MobileNav />
+      
+      {/* Desktop Sidebar */}
+      <div className="hidden lg:block">
+        <Sidebar />
+      </div>
+      
+      {/* Main Content */}
+      <main className="lg:ml-64 min-h-screen pt-16 lg:pt-0">
+        <div className="p-4 sm:p-6 lg:p-8">
           {children}
         </div>
       </main>

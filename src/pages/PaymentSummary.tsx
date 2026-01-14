@@ -79,21 +79,86 @@ export function PaymentSummary() {
 
   return (
     <div className="animate-fade-in">
-      <div className="page-header"><h1 className="page-title">Payment Summary</h1><p className="page-description">Overview of contractor payments across all projects</p></div>
-      <div className="relative max-w-sm mb-6"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" /><Input placeholder="Search contractors..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" /></div>
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="bg-muted/50 p-4 rounded-lg text-center"><p className="text-xl font-bold">{formatCurrency(totals.agreed)}</p><p className="text-sm text-muted-foreground">Total Agreed</p></div>
-        <div className="bg-success/10 p-4 rounded-lg text-center"><p className="text-xl font-bold text-success">{formatCurrency(totals.paid)}</p><p className="text-sm text-muted-foreground">Total Paid</p></div>
-        <div className="bg-warning/10 p-4 rounded-lg text-center"><p className="text-xl font-bold text-warning">{formatCurrency(totals.balance)}</p><p className="text-sm text-muted-foreground">Balance Due</p></div>
+      <div className="page-header">
+        <h1 className="page-title">Payment Summary</h1>
+        <p className="page-description">Overview of contractor payments across all projects</p>
       </div>
-      <div className="bg-card rounded-xl border border-border overflow-hidden">
-        {filtered.length === 0 ? <div className="p-12 text-center"><p className="text-muted-foreground">No payment data found.</p></div> : (
-          <table className="data-table"><thead><tr><th>Contractor</th><th>Total Agreed Pay</th><th>Total Paid</th><th>Balance Due</th></tr></thead>
-            <tbody>{filtered.map((s) => (
-              <tr key={s.contractor_id}><td className="font-medium">{s.contractor_name}</td><td>{formatCurrency(s.total_agreed)}</td><td className="text-success">{formatCurrency(s.total_paid)}</td><td className={s.balance_due > 0 ? 'text-warning font-medium' : 'text-success'}>{formatCurrency(s.balance_due)}</td></tr>
-            ))}</tbody></table>
-        )}
+      
+      <div className="relative max-w-full sm:max-w-sm mb-6">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Input placeholder="Search contractors..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" />
       </div>
+      
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <div className="bg-muted/50 p-4 rounded-lg text-center">
+          <p className="text-lg sm:text-xl font-bold">{formatCurrency(totals.agreed)}</p>
+          <p className="text-sm text-muted-foreground">Total Agreed</p>
+        </div>
+        <div className="bg-success/10 p-4 rounded-lg text-center">
+          <p className="text-lg sm:text-xl font-bold text-success">{formatCurrency(totals.paid)}</p>
+          <p className="text-sm text-muted-foreground">Total Paid</p>
+        </div>
+        <div className="bg-warning/10 p-4 rounded-lg text-center">
+          <p className="text-lg sm:text-xl font-bold text-warning">{formatCurrency(totals.balance)}</p>
+          <p className="text-sm text-muted-foreground">Balance Due</p>
+        </div>
+      </div>
+      
+      {filtered.length === 0 ? (
+        <div className="bg-card rounded-xl border border-border p-12 text-center">
+          <p className="text-muted-foreground">No payment data found.</p>
+        </div>
+      ) : (
+        <>
+          {/* Desktop Table */}
+          <div className="hidden lg:block bg-card rounded-xl border border-border overflow-hidden">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Contractor</th>
+                  <th>Total Agreed Pay</th>
+                  <th>Total Paid</th>
+                  <th>Balance Due</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((s) => (
+                  <tr key={s.contractor_id}>
+                    <td className="font-medium">{s.contractor_name}</td>
+                    <td>{formatCurrency(s.total_agreed)}</td>
+                    <td className="text-success">{formatCurrency(s.total_paid)}</td>
+                    <td className={s.balance_due > 0 ? 'text-warning font-medium' : 'text-success'}>{formatCurrency(s.balance_due)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          
+          {/* Mobile Cards */}
+          <div className="lg:hidden grid gap-4">
+            {filtered.map((s) => (
+              <div key={s.contractor_id} className="bg-card rounded-xl border border-border p-4">
+                <h3 className="font-semibold mb-3">{s.contractor_name}</h3>
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Agreed</p>
+                    <p className="font-semibold text-sm">{formatCurrency(s.total_agreed)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Paid</p>
+                    <p className="font-semibold text-sm text-success">{formatCurrency(s.total_paid)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Balance</p>
+                    <p className={`font-semibold text-sm ${s.balance_due > 0 ? 'text-warning' : 'text-success'}`}>{formatCurrency(s.balance_due)}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }

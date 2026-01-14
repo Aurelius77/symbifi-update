@@ -156,20 +156,20 @@ export function Dashboard() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
         {stats.map((stat, index) => (
           <div 
             key={stat.label} 
             className="stat-card animate-slide-up"
             style={{ animationDelay: `${index * 0.1}s` }}
           >
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="stat-card-value">{stat.value}</p>
-                <p className="stat-card-label">{stat.label}</p>
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+              <div className="order-2 sm:order-1">
+                <p className="stat-card-value text-xl sm:text-3xl">{stat.value}</p>
+                <p className="stat-card-label text-xs sm:text-sm">{stat.label}</p>
               </div>
-              <div className={`stat-card-icon ${stat.color}`}>
-                <stat.icon className="w-5 h-5" />
+              <div className={`stat-card-icon ${stat.color} order-1 sm:order-2 w-8 h-8 sm:w-10 sm:h-10`}>
+                <stat.icon className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
             </div>
           </div>
@@ -177,12 +177,12 @@ export function Dashboard() {
       </div>
 
       {/* Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Recent Payments */}
-        <div className="bg-card rounded-xl border border-border p-6">
+        <div className="bg-card rounded-xl border border-border p-4 sm:p-6">
           <div className="flex items-center gap-2 mb-4">
             <CreditCard className="w-5 h-5 text-primary" />
-            <h2 className="text-lg font-semibold">Payments This Month</h2>
+            <h2 className="text-base sm:text-lg font-semibold">Payments This Month</h2>
           </div>
           {thisMonthPayments.length === 0 ? (
             <p className="text-muted-foreground text-sm py-8 text-center">No payments recorded this month</p>
@@ -193,11 +193,11 @@ export function Dashboard() {
                 const project = projects.find(p => p.id === payment.project_id);
                 return (
                   <div key={payment.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-                    <div>
-                      <p className="font-medium text-sm">{contractor?.full_name || 'Unknown'}</p>
-                      <p className="text-xs text-muted-foreground">{project?.name || 'Unknown Project'}</p>
+                    <div className="min-w-0 flex-1 mr-3">
+                      <p className="font-medium text-sm truncate">{contractor?.full_name || 'Unknown'}</p>
+                      <p className="text-xs text-muted-foreground truncate">{project?.name || 'Unknown Project'}</p>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right flex-shrink-0">
                       <p className="font-semibold text-sm text-primary">{formatCurrency(Number(payment.amount_paid))}</p>
                       <p className="text-xs text-muted-foreground">{format(new Date(payment.payment_date), 'MMM d')}</p>
                     </div>
@@ -209,54 +209,54 @@ export function Dashboard() {
         </div>
 
         {/* Project Status Overview */}
-        <div className="bg-card rounded-xl border border-border p-6">
+        <div className="bg-card rounded-xl border border-border p-4 sm:p-6">
           <div className="flex items-center gap-2 mb-4">
             <TrendingUp className="w-5 h-5 text-primary" />
-            <h2 className="text-lg font-semibold">Project Overview</h2>
+            <h2 className="text-base sm:text-lg font-semibold">Project Overview</h2>
           </div>
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             <div className="flex items-center justify-between p-3 bg-accent/50 rounded-lg">
-              <div className="flex items-center gap-3">
-                <Clock className="w-5 h-5 text-primary" />
-                <span className="text-sm font-medium">Active Projects</span>
+              <div className="flex items-center gap-2 sm:gap-3">
+                <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+                <span className="text-xs sm:text-sm font-medium">Active Projects</span>
               </div>
-              <span className="text-lg font-bold text-primary">{activeProjects.length}</span>
+              <span className="text-base sm:text-lg font-bold text-primary">{activeProjects.length}</span>
             </div>
             <div className="flex items-center justify-between p-3 bg-success/10 rounded-lg">
-              <div className="flex items-center gap-3">
-                <CheckCircle2 className="w-5 h-5 text-success" />
-                <span className="text-sm font-medium">Completed Projects</span>
+              <div className="flex items-center gap-2 sm:gap-3">
+                <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-success" />
+                <span className="text-xs sm:text-sm font-medium">Completed Projects</span>
               </div>
-              <span className="text-lg font-bold text-success">
+              <span className="text-base sm:text-lg font-bold text-success">
                 {projects.filter(p => p.status === 'Completed').length}
               </span>
             </div>
             <div className="flex items-center justify-between p-3 bg-warning/10 rounded-lg">
-              <div className="flex items-center gap-3">
-                <AlertCircle className="w-5 h-5 text-warning" />
-                <span className="text-sm font-medium">Unpaid Assignments</span>
+              <div className="flex items-center gap-2 sm:gap-3">
+                <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-warning" />
+                <span className="text-xs sm:text-sm font-medium">Unpaid Assignments</span>
               </div>
-              <span className="text-lg font-bold text-warning">{unpaidContractors}</span>
+              <span className="text-base sm:text-lg font-bold text-warning">{unpaidContractors}</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* Quick Stats */}
-      <div className="mt-6 bg-card rounded-xl border border-border p-6">
-        <h2 className="text-lg font-semibold mb-4">Financial Summary</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="text-center p-4 bg-muted/50 rounded-lg">
-            <p className="text-2xl font-bold text-foreground">{formatCurrency(totalBudget)}</p>
-            <p className="text-sm text-muted-foreground">Total Project Budgets</p>
+      <div className="mt-4 sm:mt-6 bg-card rounded-xl border border-border p-4 sm:p-6">
+        <h2 className="text-base sm:text-lg font-semibold mb-4">Financial Summary</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-6">
+          <div className="text-center p-3 sm:p-4 bg-muted/50 rounded-lg">
+            <p className="text-lg sm:text-2xl font-bold text-foreground">{formatCurrency(totalBudget)}</p>
+            <p className="text-xs sm:text-sm text-muted-foreground">Total Project Budgets</p>
           </div>
-          <div className="text-center p-4 bg-success/10 rounded-lg">
-            <p className="text-2xl font-bold text-success">{formatCurrency(totalPaid)}</p>
-            <p className="text-sm text-muted-foreground">Total Payments Made</p>
+          <div className="text-center p-3 sm:p-4 bg-success/10 rounded-lg">
+            <p className="text-lg sm:text-2xl font-bold text-success">{formatCurrency(totalPaid)}</p>
+            <p className="text-xs sm:text-sm text-muted-foreground">Total Payments Made</p>
           </div>
-          <div className="text-center p-4 bg-warning/10 rounded-lg">
-            <p className="text-2xl font-bold text-warning">{formatCurrency(totalBudget - totalPaid)}</p>
-            <p className="text-sm text-muted-foreground">Remaining Budget</p>
+          <div className="text-center p-3 sm:p-4 bg-warning/10 rounded-lg">
+            <p className="text-lg sm:text-2xl font-bold text-warning">{formatCurrency(totalBudget - totalPaid)}</p>
+            <p className="text-xs sm:text-sm text-muted-foreground">Remaining Budget</p>
           </div>
         </div>
       </div>
