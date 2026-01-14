@@ -160,21 +160,21 @@ export function Contractors() {
 
   return (
     <div className="animate-fade-in">
-      <div className="page-header flex items-center justify-between">
+      <div className="page-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="page-title">Contractors</h1>
           <p className="page-description">Manage your team of contractors and collaborators</p>
         </div>
         <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) resetForm(); }}>
           <DialogTrigger asChild>
-            <Button className="gap-2"><Plus className="w-4 h-4" />Add Contractor</Button>
+            <Button className="gap-2 w-full sm:w-auto"><Plus className="w-4 h-4" />Add Contractor</Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent className="max-w-[95vw] sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingContractor ? 'Edit Contractor' : 'Add New Contractor'}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="full_name">Full Name</Label>
                   <Input id="full_name" value={formData.full_name} onChange={(e) => setFormData({ ...formData, full_name: e.target.value })} required />
@@ -184,7 +184,7 @@ export function Contractors() {
                   <Input id="role" value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value })} required />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
                   <Input id="email" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} required />
@@ -194,7 +194,7 @@ export function Contractors() {
                   <Input id="phone" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="contractor_type">Contractor Type</Label>
                   <Select value={formData.contractor_type} onValueChange={(value: ContractorType) => setFormData({ ...formData, contractor_type: value })}>
@@ -220,22 +220,22 @@ export function Contractors() {
                 <Label htmlFor="bank_wallet_details">Bank / Wallet Details</Label>
                 <Textarea id="bank_wallet_details" value={formData.bank_wallet_details} onChange={(e) => setFormData({ ...formData, bank_wallet_details: e.target.value })} placeholder="Bank name, account number, wallet address..." rows={3} />
               </div>
-              <div className="flex justify-end gap-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => { setIsOpen(false); resetForm(); }}>Cancel</Button>
-                <Button type="submit">{editingContractor ? 'Update' : 'Create'} Contractor</Button>
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-4">
+                <Button type="button" variant="outline" onClick={() => { setIsOpen(false); resetForm(); }} className="w-full sm:w-auto">Cancel</Button>
+                <Button type="submit" className="w-full sm:w-auto">{editingContractor ? 'Update' : 'Create'} Contractor</Button>
               </div>
             </form>
           </DialogContent>
         </Dialog>
       </div>
 
-      <div className="flex gap-4 mb-6">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input placeholder="Search contractors..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" />
         </div>
         <Select value={statusFilter} onValueChange={(value: ContractorStatus | 'all') => setStatusFilter(value)}>
-          <SelectTrigger className="w-40"><SelectValue placeholder="Filter by status" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-40"><SelectValue placeholder="Filter by status" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
             <SelectItem value="Active">Active</SelectItem>
@@ -249,25 +249,25 @@ export function Contractors() {
           <p className="text-muted-foreground">No contractors found. Add your first contractor to get started.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredContractors.map((contractor) => (
-            <div key={contractor.id} className="bg-card rounded-xl border border-border p-5 animate-slide-up">
+            <div key={contractor.id} className="bg-card rounded-xl border border-border p-4 sm:p-5 animate-slide-up">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                     <User className="w-5 h-5 text-primary" />
                   </div>
-                  <div>
-                    <h3 className="font-semibold">{contractor.full_name}</h3>
-                    <p className="text-sm text-muted-foreground">{contractor.role}</p>
+                  <div className="min-w-0">
+                    <h3 className="font-semibold truncate">{contractor.full_name}</h3>
+                    <p className="text-sm text-muted-foreground truncate">{contractor.role}</p>
                   </div>
                 </div>
-                <span className={`badge-status ${contractor.status === 'Active' ? 'badge-active' : 'badge-inactive'}`}>
+                <span className={`badge-status ${contractor.status === 'Active' ? 'badge-active' : 'badge-inactive'} flex-shrink-0`}>
                   {contractor.status}
                 </span>
               </div>
               <div className="space-y-2 text-sm">
-                <p className="text-muted-foreground">{contractor.email}</p>
+                <p className="text-muted-foreground truncate">{contractor.email}</p>
                 {contractor.phone && <p className="text-muted-foreground">{contractor.phone}</p>}
                 <p className="text-xs text-muted-foreground/70">{contractor.contractor_type}</p>
               </div>

@@ -10,6 +10,8 @@ import { Auth } from "./pages/Auth";
 import { Dashboard } from "./pages/Dashboard";
 import { Projects } from "./pages/Projects";
 import { Contractors } from "./pages/Contractors";
+import { ProjectTeam } from "./pages/ProjectTeam";
+import { Payments } from "./pages/Payments";
 import { PaymentSummary } from "./pages/PaymentSummary";
 import { Settings } from "./pages/Settings";
 import NotFound from "./pages/NotFound";
@@ -28,6 +30,8 @@ const App = () => (
             <Route path="/" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
             <Route path="/projects" element={<ProtectedRoute><Layout><Projects /></Layout></ProtectedRoute>} />
             <Route path="/contractors" element={<ProtectedRoute><Layout><Contractors /></Layout></ProtectedRoute>} />
+            <Route path="/project-team" element={<ProtectedRoute><Layout><ProjectTeam /></Layout></ProtectedRoute>} />
+            <Route path="/payments" element={<ProtectedRoute><Layout><Payments /></Layout></ProtectedRoute>} />
             <Route path="/payment-summary" element={<ProtectedRoute><Layout><PaymentSummary /></Layout></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
