@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { ActivityLog } from '@/components/dashboard/ActivityLog';
 import { 
   FolderKanban, 
   Users, 
@@ -240,6 +241,11 @@ export function Dashboard() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Activity Log */}
+      <div className="mt-4 sm:mt-6">
+        <ActivityLog />
       </div>
 
       {/* Quick Stats */}
