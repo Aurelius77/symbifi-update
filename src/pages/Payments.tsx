@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Plus, Search, Edit2, Trash2, CreditCard, Calendar, Building } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, CreditCard, Calendar, Building, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { exportToCSV, formatDateForCSV, formatCurrencyForCSV } from '@/lib/csv-export';
 
 interface Project {
   id: string;
@@ -153,6 +154,30 @@ export function Payments() {
 
   const totalPayments = filtered.reduce((sum, p) => sum + Number(p.amount_paid), 0);
 
+  const handleExportCSV = () => {
+    const exportData = filtered.map(p => ({
+      date: formatDateForCSV(p.payment_date),
+      contractor: getContractorName(p.contractor_id),
+      project: getProjectName(p.project_id),
+      amount: formatCurrencyForCSV(p.amount_paid),
+      method: p.payment_method,
+      reference: p.reference || '',
+      recorded_by: p.recorded_by || '',
+    }));
+
+    exportToCSV(exportData, `payments-export-${new Date().toISOString().split('T')[0]}`, {
+      date: 'Payment Date',
+      contractor: 'Contractor',
+      project: 'Project',
+      amount: 'Amount (NGN)',
+      method: 'Payment Method',
+      reference: 'Reference',
+      recorded_by: 'Recorded By',
+    });
+
+    toast({ title: 'Payments exported to CSV' });
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -168,16 +193,20 @@ export function Payments() {
           <h1 className="page-title">Payments</h1>
           <p className="page-description">Record and manage contractor payments</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={resetForm} className="w-full sm:w-auto">
-              <Plus className="w-4 h-4 mr-2" /> Record Payment
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{editingPayment ? 'Edit Payment' : 'Record New Payment'}</DialogTitle>
-            </DialogHeader>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <Button onClick={handleExportCSV} variant="outline" className="w-full sm:w-auto">
+            <Download className="w-4 h-4 mr-2" /> Export CSV
+          </Button>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={resetForm} className="w-full sm:w-auto">
+                <Plus className="w-4 h-4 mr-2" /> Record Payment
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>{editingPayment ? 'Edit Payment' : 'Record New Payment'}</DialogTitle>
+              </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4 mt-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -257,6 +286,7 @@ export function Payments() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Summary Card */}

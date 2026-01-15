@@ -14,6 +14,7 @@ import { ProjectTeam } from "./pages/ProjectTeam";
 import { Payments } from "./pages/Payments";
 import { PaymentSummary } from "./pages/PaymentSummary";
 import { Settings } from "./pages/Settings";
+import { AdminUsers } from "./pages/AdminUsers";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ const App = () => (
             <Route path="/payments" element={<ProtectedRoute><Layout><Payments /></Layout></ProtectedRoute>} />
             <Route path="/payment-summary" element={<ProtectedRoute><Layout><PaymentSummary /></Layout></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
+            <Route path="/admin/users" element={<ProtectedRoute><Layout><AdminUsers /></Layout></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
