@@ -89,6 +89,59 @@ export type Database = {
         }
         Relationships: []
       }
+      expenses: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          description: string
+          expense_date: string
+          id: string
+          notes: string | null
+          project_id: string
+          receipt_reference: string | null
+          recorded_by: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          category?: string
+          created_at?: string
+          description: string
+          expense_date?: string
+          id?: string
+          notes?: string | null
+          project_id: string
+          receipt_reference?: string | null
+          recorded_by?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          description?: string
+          expense_date?: string
+          id?: string
+          notes?: string | null
+          project_id?: string
+          receipt_reference?: string | null
+          recorded_by?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payments: {
         Row: {
           amount_paid: number

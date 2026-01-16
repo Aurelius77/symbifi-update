@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, FolderKanban, Users, UserCheck, CreditCard, Wallet, FileText, Settings, ShieldCheck } from 'lucide-react';
+import { LayoutDashboard, FolderKanban, Users, UserCheck, CreditCard, Wallet, FileText, Settings, ShieldCheck, Receipt, BarChart3, FileCheck } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 const navigation = [
@@ -8,7 +8,10 @@ const navigation = [
   { name: 'Contractors', href: '/contractors', icon: Users },
   { name: 'Project Team', href: '/project-team', icon: UserCheck },
   { name: 'Payments', href: '/payments', icon: CreditCard },
+  { name: 'Expenses', href: '/expenses', icon: Receipt },
   { name: 'Payment Summary', href: '/payment-summary', icon: FileText },
+  { name: 'Payroll Reports', href: '/payroll-reports', icon: BarChart3 },
+  { name: 'Payslips', href: '/payslips', icon: FileCheck },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
 

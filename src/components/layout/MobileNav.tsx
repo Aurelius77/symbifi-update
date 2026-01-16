@@ -10,7 +10,10 @@ import {
   Settings,
   Wallet,
   Menu,
-  ShieldCheck
+  ShieldCheck,
+  Receipt,
+  BarChart3,
+  FileCheck
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -22,7 +25,10 @@ const navigation = [
   { name: 'Contractors', href: '/contractors', icon: Users },
   { name: 'Project Team', href: '/project-team', icon: UserCheck },
   { name: 'Payments', href: '/payments', icon: CreditCard },
+  { name: 'Expenses', href: '/expenses', icon: Receipt },
   { name: 'Payment Summary', href: '/payment-summary', icon: FileText },
+  { name: 'Payroll Reports', href: '/payroll-reports', icon: BarChart3 },
+  { name: 'Payslips', href: '/payslips', icon: FileCheck },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
