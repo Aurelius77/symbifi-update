@@ -19,8 +19,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Pencil, Trash2, Search, User } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, User, Eye } from 'lucide-react';
 import { toast } from 'sonner';
+import { ViewContractorDialog } from '@/components/contractors/ViewContractorDialog';
 
 type ContractorType = 'Individual' | 'Agency';
 type ContractorStatus = 'Active' | 'Inactive';
@@ -34,6 +35,7 @@ interface Contractor {
   bank_wallet_details: string | null;
   contractor_type: string;
   status: string;
+  created_at?: string;
 }
 
 export function Contractors() {
@@ -42,6 +44,7 @@ export function Contractors() {
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
   const [editingContractor, setEditingContractor] = useState<Contractor | null>(null);
+  const [viewingContractor, setViewingContractor] = useState<Contractor | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<ContractorStatus | 'all'>('all');
 
@@ -272,8 +275,11 @@ export function Contractors() {
                 <p className="text-xs text-muted-foreground/70">{contractor.contractor_type}</p>
               </div>
               <div className="flex gap-2 mt-4 pt-4 border-t border-border">
-                <Button variant="outline" size="sm" onClick={() => handleEdit(contractor)} className="flex-1">
-                  <Pencil className="w-4 h-4 mr-1" /> Edit
+                <Button variant="outline" size="sm" onClick={() => setViewingContractor(contractor)} className="flex-1">
+                  <Eye className="w-4 h-4 mr-1" /> View
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => handleEdit(contractor)}>
+                  <Pencil className="w-4 h-4" />
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => handleDelete(contractor.id)}>
                   <Trash2 className="w-4 h-4 text-destructive" />
@@ -283,6 +289,13 @@ export function Contractors() {
           ))}
         </div>
       )}
+
+      {/* View Contractor Dialog */}
+      <ViewContractorDialog
+        contractor={viewingContractor}
+        open={!!viewingContractor}
+        onOpenChange={(open) => !open && setViewingContractor(null)}
+      />
     </div>
   );
 }
