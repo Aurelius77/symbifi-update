@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -110,7 +110,7 @@ export function Auth() {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md animate-fade-in">
         {/* Logo */}
-        <div className="flex items-center justify-center gap-3 mb-8">
+        <Link to="/landing" className="flex items-center justify-center gap-3 mb-8 hover:opacity-80 transition-opacity">
           <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center">
             <Wallet className="w-6 h-6 text-primary-foreground" />
           </div>
@@ -118,7 +118,7 @@ export function Auth() {
             <h1 className="text-2xl font-bold text-foreground">SymbiFi</h1>
             <p className="text-xs text-muted-foreground">Payroll Manager</p>
           </div>
-        </div>
+        </Link>
 
         <Card className="border-border shadow-lg">
           <CardHeader className="text-center">

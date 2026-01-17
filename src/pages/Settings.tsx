@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LogOut, User, Shield } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { ProfileSettings } from '@/components/settings/ProfileSettings';
 
 export function Settings() {
   const { user, userRole, signOut } = useAuth();
@@ -20,6 +21,9 @@ export function Settings() {
         <p className="page-description">Manage your account and preferences</p>
       </div>
       <div className="grid gap-4 sm:gap-6 max-w-2xl">
+        {/* Profile Settings */}
+        <ProfileSettings />
+        
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
