@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { Plus, Search, Edit2, Trash2, Receipt, Calendar, Building, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -51,6 +52,7 @@ const EXPENSE_CATEGORIES = [
 export function Expenses() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { formatCurrency, getCurrencySymbol, profile } = useUserProfile();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -156,9 +158,6 @@ export function Expenses() {
 
   const getProjectName = (id: string) => projects.find(p => p.id === id)?.name || 'Unknown';
 
-  const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(amount);
-
   const filtered = expenses.filter(e => {
     const matchesSearch =
       e.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -189,7 +188,7 @@ export function Expenses() {
       project: 'Project',
       description: 'Description',
       category: 'Category',
-      amount: 'Amount (NGN)',
+      amount: `Amount (${profile.currency})`,
       receipt: 'Receipt Reference',
       recorded_by: 'Recorded By',
       notes: 'Notes',
@@ -257,7 +256,7 @@ export function Expenses() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Amount (₦)</Label>
+                    <Label>Amount ({getCurrencySymbol()})</Label>
                     <Input
                       type="number"
                       value={formData.amount}
