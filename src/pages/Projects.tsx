@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -40,6 +41,7 @@ interface Project {
 
 export function Projects() {
   const { user } = useAuth();
+  const { formatCurrency, getCurrencySymbol } = useUserProfile();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
@@ -155,14 +157,6 @@ export function Projects() {
     return matchesSearch && matchesStatus;
   });
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-      minimumFractionDigits: 0,
-    }).format(amount);
-  };
-
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
       'Active': 'badge-status badge-active',
@@ -221,7 +215,7 @@ export function Projects() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="total_budget">Total Budget (₦)</Label>
+                  <Label htmlFor="total_budget">Total Budget ({getCurrencySymbol()})</Label>
                   <Input id="total_budget" type="number" value={formData.total_budget} onChange={(e) => setFormData({ ...formData, total_budget: e.target.value })} required />
                 </div>
                 <div className="space-y-2">

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { Plus, Search, Edit2, Trash2, CreditCard, Calendar, Building, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,6 +37,7 @@ interface Payment {
 export function Payments() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { formatCurrency, getCurrencySymbol, profile } = useUserProfile();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [contractors, setContractors] = useState<Contractor[]>([]);
@@ -140,9 +142,6 @@ export function Payments() {
   const getProjectName = (id: string) => projects.find(p => p.id === id)?.name || 'Unknown';
   const getContractorName = (id: string) => contractors.find(c => c.id === id)?.full_name || 'Unknown';
 
-  const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(amount);
-
   const filtered = payments.filter(p => {
     const matchesSearch =
       getContractorName(p.contractor_id).toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -169,7 +168,7 @@ export function Payments() {
       date: 'Payment Date',
       contractor: 'Contractor',
       project: 'Project',
-      amount: 'Amount (NGN)',
+      amount: `Amount (${profile.currency})`,
       method: 'Payment Method',
       reference: 'Reference',
       recorded_by: 'Recorded By',
@@ -230,7 +229,7 @@ export function Payments() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Amount Paid (₦)</Label>
+                  <Label>Amount Paid ({getCurrencySymbol()})</Label>
                   <Input
                     type="number"
                     value={formData.amount_paid}

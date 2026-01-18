@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { Search, Download, PieChart, TrendingUp, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -26,6 +27,7 @@ interface PaymentStatusSummary {
 export function PaymentSummary() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { formatCurrency, profile } = useUserProfile();
   const [summaries, setSummaries] = useState<PaymentSummaryData[]>([]);
   const [statusSummaries, setStatusSummaries] = useState<PaymentStatusSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -107,9 +109,6 @@ export function PaymentSummary() {
     setLoading(false);
   };
 
-  const formatCurrency = (amount: number) => 
-    new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(amount);
-
   const handleExportContractorSummary = () => {
     const exportData = filtered.map(s => ({
       contractor_name: s.contractor_name,
@@ -120,9 +119,9 @@ export function PaymentSummary() {
 
     exportToCSV(exportData, `contractor-summary-${new Date().toISOString().split('T')[0]}`, {
       contractor_name: 'Contractor',
-      total_agreed: 'Total Agreed (NGN)',
-      total_paid: 'Total Paid (NGN)',
-      balance_due: 'Balance Due (NGN)',
+      total_agreed: `Total Agreed (${profile.currency})`,
+      total_paid: `Total Paid (${profile.currency})`,
+      balance_due: `Balance Due (${profile.currency})`,
     });
 
     toast({ title: 'Contractor summary exported to CSV' });
@@ -138,7 +137,7 @@ export function PaymentSummary() {
     exportToCSV(exportData, `payment-status-summary-${new Date().toISOString().split('T')[0]}`, {
       status: 'Payment Status',
       count: 'Number of Assignments',
-      total_amount: 'Total Amount (NGN)',
+      total_amount: `Total Amount (${profile.currency})`,
     });
 
     toast({ title: 'Payment status summary exported to CSV' });

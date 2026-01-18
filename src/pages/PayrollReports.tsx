@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { Download, Filter, Calendar, FileText, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -54,6 +55,7 @@ interface Expense {
 export function PayrollReports() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { formatCurrency, profile } = useUserProfile();
   const [projects, setProjects] = useState<Project[]>([]);
   const [contractors, setContractors] = useState<Contractor[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -88,9 +90,6 @@ export function PayrollReports() {
     if (expensesRes.data) setExpenses(expensesRes.data);
     setLoading(false);
   };
-
-  const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(amount);
 
   const getProjectName = (id: string) => projects.find(p => p.id === id)?.name || 'Unknown';
   const getContractorName = (id: string) => contractors.find(c => c.id === id)?.full_name || 'Unknown';
@@ -187,9 +186,9 @@ export function PayrollReports() {
 
     exportToCSV(exportData, `payroll-report-${dateFrom}-to-${dateTo}`, {
       contractor: 'Contractor',
-      total_agreed: 'Total Agreed (NGN)',
-      total_paid: 'Total Paid (NGN)',
-      balance_due: 'Balance Due (NGN)',
+      total_agreed: `Total Agreed (${profile.currency})`,
+      total_paid: `Total Paid (${profile.currency})`,
+      balance_due: `Balance Due (${profile.currency})`,
       payment_count: 'Payment Count',
     });
 
@@ -208,11 +207,11 @@ export function PayrollReports() {
 
     exportToCSV(exportData, `project-financial-report-${dateFrom}-to-${dateTo}`, {
       project: 'Project',
-      budget: 'Budget (NGN)',
-      agreed_to_contractors: 'Agreed to Contractors (NGN)',
-      paid_to_contractors: 'Paid to Contractors (NGN)',
-      expenses: 'Expenses (NGN)',
-      profit: 'Profit (NGN)',
+      budget: `Budget (${profile.currency})`,
+      agreed_to_contractors: `Agreed to Contractors (${profile.currency})`,
+      paid_to_contractors: `Paid to Contractors (${profile.currency})`,
+      expenses: `Expenses (${profile.currency})`,
+      profit: `Profit (${profile.currency})`,
     });
 
     toast({ title: 'Project financial report exported to CSV' });

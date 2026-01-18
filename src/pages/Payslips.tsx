@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { FileText, Download, Search, User, Building, Calendar, DollarSign, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -58,6 +59,7 @@ interface PayslipData {
 export function Payslips() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { formatCurrency, profile } = useUserProfile();
   const [projects, setProjects] = useState<Project[]>([]);
   const [contractors, setContractors] = useState<Contractor[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -87,9 +89,6 @@ export function Payslips() {
     if (teamsRes.data) setProjectTeams(teamsRes.data);
     setLoading(false);
   };
-
-  const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(amount);
 
   const getCalculatedPay = (team: ProjectTeam, project: Project) => {
     if (team.payment_type === 'Fixed Amount') {
@@ -195,6 +194,10 @@ export function Payslips() {
 
     const balanceColor = selectedPayslip.balance <= 0 ? '#10b981' : '#f59e0b';
 
+    // Company branding from profile
+    const companyName = escapeHtml(profile.business_name) || 'SymbiFi';
+    const companyLogo = profile.logo_url ? `<img src="${escapeHtml(profile.logo_url)}" alt="Company Logo" style="max-height: 60px; max-width: 200px; margin-bottom: 10px;" />` : '';
+
     printWindow.document.write(`
       <!DOCTYPE html>
       <html>
@@ -226,7 +229,8 @@ export function Payslips() {
         <body>
           <div class="payslip">
             <div class="header">
-              <h1>SymbiFi</h1>
+              ${companyLogo}
+              <h1>${companyName}</h1>
               <p>Payroll Management System</p>
               <p style="font-size: 12px; margin-top: 10px;">Generated: ${format(new Date(), 'MMMM d, yyyy')}</p>
             </div>
@@ -275,6 +279,7 @@ export function Payslips() {
             
             <div class="footer">
               <p>This is a computer-generated document. No signature is required.</p>
+              <p>© ${new Date().getFullYear()} ${companyName}. All rights reserved.</p>
             </div>
           </div>
         </body>
@@ -398,9 +403,12 @@ export function Payslips() {
           
           {selectedPayslip && (
             <div className="payslip">
-              {/* Header */}
+              {/* Header with branding */}
               <div className="header text-center border-b-2 border-primary pb-4 mb-6">
-                <h1 className="text-2xl font-bold text-primary">SymbiFi</h1>
+                {profile.logo_url && (
+                  <img src={profile.logo_url} alt="Company Logo" className="h-12 mx-auto mb-2 object-contain" />
+                )}
+                <h1 className="text-2xl font-bold text-primary">{profile.business_name || 'SymbiFi'}</h1>
                 <p className="text-muted-foreground text-sm">Payroll Management System</p>
                 <p className="text-xs text-muted-foreground mt-2">
                   Generated: {format(new Date(), 'MMMM d, yyyy')}
@@ -518,8 +526,8 @@ export function Payslips() {
 
               {/* Footer */}
               <div className="footer mt-8 text-center text-muted-foreground text-xs">
-                <p>This is a computer-generated payslip from SymbiFi Payroll Management System.</p>
-                <p>© {new Date().getFullYear()} SymbiFi. All rights reserved.</p>
+                <p>This is a computer-generated payslip from {profile.business_name || 'SymbiFi'} Payroll Management System.</p>
+                <p>© {new Date().getFullYear()} {profile.business_name || 'SymbiFi'}. All rights reserved.</p>
               </div>
             </div>
           )}

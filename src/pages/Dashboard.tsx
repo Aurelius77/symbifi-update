@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { ActivityLog } from '@/components/dashboard/ActivityLog';
 import { 
   FolderKanban, 
@@ -46,6 +47,7 @@ interface ProjectTeam {
 
 export function Dashboard() {
   const { user } = useAuth();
+  const { formatCurrency } = useUserProfile();
   const [projects, setProjects] = useState<Project[]>([]);
   const [contractors, setContractors] = useState<Contractor[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -105,14 +107,6 @@ export function Dashboard() {
   }).length;
 
   const unpaidContractors = projectTeams.filter(t => t.payment_status === 'Unpaid').length;
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-      minimumFractionDigits: 0,
-    }).format(amount);
-  };
 
   const stats = [
     {

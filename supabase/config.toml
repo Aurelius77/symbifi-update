@@ -1,1 +1,4 @@
 project_id = "vtozxyxvaccbqggnxfrs"
+
+[functions.validate-input]
+verify_jwt = false
