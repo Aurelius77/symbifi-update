@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { FileText, Download, Search, User, Building, Calendar, DollarSign, Printer } from 'lucide-react';
@@ -67,7 +67,6 @@ export function Payslips() {
   const [filterProject, setFilterProject] = useState<string>('all');
   const [selectedPayslip, setSelectedPayslip] = useState<PayslipData | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const payslipRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (user) fetchData();
@@ -138,9 +137,16 @@ export function Payslips() {
     setDialogOpen(true);
   };
 
+  // Escape HTML to prevent XSS attacks when injecting user data into print window
+  const escapeHtml = (text: string | null | undefined): string => {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  };
+
   const handlePrint = () => {
-    const printContent = payslipRef.current;
-    if (!printContent) return;
+    if (!selectedPayslip) return;
 
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
@@ -148,11 +154,52 @@ export function Payslips() {
       return;
     }
 
+    // Escape all user-controlled data to prevent XSS
+    const safeContractor = {
+      full_name: escapeHtml(selectedPayslip.contractor.full_name),
+      role: escapeHtml(selectedPayslip.contractor.role),
+      email: escapeHtml(selectedPayslip.contractor.email),
+      phone: escapeHtml(selectedPayslip.contractor.phone),
+      bank_wallet_details: escapeHtml(selectedPayslip.contractor.bank_wallet_details),
+    };
+
+    const safeProject = {
+      name: escapeHtml(selectedPayslip.project.name),
+      client_name: escapeHtml(selectedPayslip.project.client_name),
+    };
+
+    const safeTeam = {
+      responsibility: escapeHtml(selectedPayslip.team.responsibility),
+      payment_type: escapeHtml(selectedPayslip.team.payment_type),
+      percentage_share: selectedPayslip.team.percentage_share,
+    };
+
+    const safePayments = selectedPayslip.payments.map(p => ({
+      id: p.id,
+      payment_date: p.payment_date,
+      payment_method: escapeHtml(p.payment_method),
+      reference: escapeHtml(p.reference),
+      amount_paid: p.amount_paid,
+    }));
+
+    const paymentRows = safePayments.length === 0 
+      ? '<tr><td colspan="4" style="text-align: center; padding: 20px; color: #64748b;">No payments recorded yet</td></tr>'
+      : safePayments.map(payment => `
+          <tr>
+            <td>${format(new Date(payment.payment_date), 'MMM d, yyyy')}</td>
+            <td>${payment.payment_method}</td>
+            <td style="color: #64748b;">${payment.reference || '-'}</td>
+            <td style="text-align: right; font-weight: 500;">${formatCurrency(payment.amount_paid)}</td>
+          </tr>
+        `).join('');
+
+    const balanceColor = selectedPayslip.balance <= 0 ? '#10b981' : '#f59e0b';
+
     printWindow.document.write(`
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Payslip - ${selectedPayslip?.contractor.full_name}</title>
+          <title>Payslip - ${safeContractor.full_name}</title>
           <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body { font-family: 'Inter', -apple-system, sans-serif; padding: 40px; background: white; }
@@ -177,7 +224,59 @@ export function Payslips() {
           </style>
         </head>
         <body>
-          ${printContent.innerHTML}
+          <div class="payslip">
+            <div class="header">
+              <h1>SymbiFi</h1>
+              <p>Payroll Management System</p>
+              <p style="font-size: 12px; margin-top: 10px;">Generated: ${format(new Date(), 'MMMM d, yyyy')}</p>
+            </div>
+            
+            <div class="section">
+              <div class="section-title">Contractor Information</div>
+              <div class="info-grid">
+                <div class="info-item"><label>Name</label><span>${safeContractor.full_name}</span></div>
+                <div class="info-item"><label>Role</label><span>${safeContractor.role}</span></div>
+                <div class="info-item"><label>Email</label><span>${safeContractor.email}</span></div>
+                <div class="info-item"><label>Phone</label><span>${safeContractor.phone || 'N/A'}</span></div>
+                ${safeContractor.bank_wallet_details ? `<div class="info-item" style="grid-column: span 2;"><label>Bank/Wallet Details</label><span>${safeContractor.bank_wallet_details}</span></div>` : ''}
+              </div>
+            </div>
+            
+            <div class="section">
+              <div class="section-title">Project Information</div>
+              <div class="info-grid">
+                <div class="info-item"><label>Project Name</label><span>${safeProject.name}</span></div>
+                <div class="info-item"><label>Client</label><span>${safeProject.client_name}</span></div>
+                <div class="info-item"><label>Responsibility</label><span>${safeTeam.responsibility}</span></div>
+                <div class="info-item"><label>Payment Type</label><span>${safeTeam.payment_type === 'Fixed Amount' ? 'Fixed Amount' : `${safeTeam.percentage_share}% of Budget`}</span></div>
+              </div>
+            </div>
+            
+            <div class="section">
+              <div class="section-title">Payment History</div>
+              <table class="payment-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Method</th>
+                    <th>Reference</th>
+                    <th style="text-align: right;">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>${paymentRows}</tbody>
+              </table>
+            </div>
+            
+            <div class="summary">
+              <div class="summary-row"><span>Agreed Pay</span><span>${formatCurrency(selectedPayslip.calculatedPay)}</span></div>
+              <div class="summary-row"><span>Total Paid</span><span>${formatCurrency(selectedPayslip.totalPaid)}</span></div>
+              <div class="summary-row total"><span>Balance Due</span><span style="color: ${balanceColor};">${formatCurrency(selectedPayslip.balance)}</span></div>
+            </div>
+            
+            <div class="footer">
+              <p>This is a computer-generated document. No signature is required.</p>
+            </div>
+          </div>
         </body>
       </html>
     `);
@@ -298,7 +397,7 @@ export function Payslips() {
           </DialogHeader>
           
           {selectedPayslip && (
-            <div ref={payslipRef} className="payslip">
+            <div className="payslip">
               {/* Header */}
               <div className="header text-center border-b-2 border-primary pb-4 mb-6">
                 <h1 className="text-2xl font-bold text-primary">SymbiFi</h1>
