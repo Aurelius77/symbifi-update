@@ -28,7 +28,7 @@ export function Sidebar() {
       <div className="p-6 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-sidebar-primary flex items-center justify-center"><Wallet className="w-5 h-5 text-sidebar-primary-foreground" /></div>
-          <div><h1 className="text-xl font-bold text-sidebar-foreground">SymbiFi</h1><p className="text-xs text-sidebar-foreground/60">Payroll Manager</p></div>
+          <div><h1 className="text-xl font-bold text-sidebar-foreground">Pavel</h1><p className="text-xs text-sidebar-foreground/60">Payroll Manager</p></div>
         </div>
       </div>
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
@@ -51,7 +51,7 @@ export function Sidebar() {
           </>
         )}
       </nav>
-      <div className="p-4 border-t border-sidebar-border"><p className="text-xs text-sidebar-foreground/50 text-center">© 2024 SymbiFi</p></div>
+      <div className="p-4 border-t border-sidebar-border"><p className="text-xs text-sidebar-foreground/50 text-center">© 2024 Pavel</p></div>
     </aside>
   );
 }

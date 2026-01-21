@@ -147,7 +147,7 @@ export function Dashboard() {
     <div className="animate-fade-in">
       <div className="page-header">
         <h1 className="page-title">Dashboard</h1>
-        <p className="page-description">Welcome to SymbiFi. Here's an overview of your payroll status.</p>
+        <p className="page-description">Welcome to Pavel. Here's an overview of your payroll status.</p>
       </div>
 
       {/* Stats Grid */}

@@ -195,7 +195,7 @@ export function ProfileSettings() {
         {/* Logo Upload */}
         <div className="space-y-3">
           <Label>Business Logo</Label>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             <div className="w-20 h-20 rounded-xl border-2 border-dashed border-border flex items-center justify-center overflow-hidden bg-muted/50">
               {profile.logo_url ? (
                 <img 
@@ -216,12 +216,12 @@ export function ProfileSettings() {
                 id="logo-upload"
                 disabled={uploading}
               />
-              <label htmlFor="logo-upload">
+              <label htmlFor="logo-upload" className="block w-full sm:w-auto">
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="gap-2 cursor-pointer"
+                  className="gap-2 cursor-pointer w-full sm:w-auto justify-center"
                   disabled={uploading}
                   asChild
                 >

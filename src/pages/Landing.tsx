@@ -65,7 +65,7 @@ export function Landing() {
               <Wallet className="w-5 h-5 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-foreground">SymbiFi</h1>
+              <h1 className="text-xl font-bold text-foreground">Pavel</h1>
               <p className="text-xs text-muted-foreground">Payroll Manager</p>
             </div>
           </div>
@@ -92,7 +92,7 @@ export function Landing() {
             <span className="text-primary">Made Simple</span>
           </h1>
           <p className="text-lg sm:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            SymbiFi helps agencies and businesses manage contractor payments, track expenses, 
+            Pavel helps agencies and businesses manage contractor payments, track expenses, 
             and generate professional payslips — all in one place.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -145,7 +145,7 @@ export function Landing() {
               </h2>
               <p className="text-lg text-muted-foreground mb-8">
                 Whether you're a freelancer managing subcontractors or an agency with a growing team, 
-                SymbiFi scales with your needs.
+                Pavel scales with your needs.
               </p>
               <ul className="space-y-4">
                 {benefits.map((benefit, index) => (
@@ -182,7 +182,7 @@ export function Landing() {
             Ready to Get Started?
           </h2>
           <p className="text-lg text-primary-foreground/80 mb-8 max-w-2xl mx-auto">
-            Join businesses using SymbiFi to streamline their contractor payroll management.
+            Join businesses using Pavel to streamline their contractor payroll management.
           </p>
           <Link to="/auth">
             <Button size="lg" variant="secondary" className="gap-2">
@@ -200,10 +200,10 @@ export function Landing() {
               <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
                 <Wallet className="w-4 h-4 text-primary-foreground" />
               </div>
-              <span className="font-semibold text-foreground">SymbiFi</span>
+              <span className="font-semibold text-foreground">Pavel</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              © {new Date().getFullYear()} SymbiFi. All rights reserved.
+              © {new Date().getFullYear()} Pavel. All rights reserved.
             </p>
           </div>
         </div>

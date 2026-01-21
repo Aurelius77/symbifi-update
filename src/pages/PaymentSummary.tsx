@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { exportToCSV, formatCurrencyForCSV } from '@/lib/csv-export';
+import { ViewContractorDialog } from '@/components/contractors/ViewContractorDialog';
 
 interface PaymentSummaryData {
   contractor_id: string;
@@ -24,14 +25,43 @@ interface PaymentStatusSummary {
   total_amount: number;
 }
 
+interface Contractor {
+  id: string;
+  full_name: string;
+  role: string;
+  email: string;
+  phone: string | null;
+  bank_wallet_details: string | null;
+  contractor_type: string;
+  status: string;
+  created_at?: string;
+}
+
+interface AssignmentRow {
+  id: string;
+  contractor_id: string;
+  contractor_name: string;
+  project_name: string;
+  responsibility: string;
+  payment_type: string;
+  percentage_share: number;
+  agreed_amount: number;
+  payment_status: string;
+  calculated_pay: number;
+}
+
 export function PaymentSummary() {
   const { user } = useAuth();
   const { toast } = useToast();
   const { formatCurrency, profile } = useUserProfile();
   const [summaries, setSummaries] = useState<PaymentSummaryData[]>([]);
   const [statusSummaries, setStatusSummaries] = useState<PaymentStatusSummary[]>([]);
+  const [contractors, setContractors] = useState<Contractor[]>([]);
+  const [assignments, setAssignments] = useState<AssignmentRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [viewingContractor, setViewingContractor] = useState<Contractor | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) fetchSummary();
@@ -48,6 +78,7 @@ export function PaymentSummary() {
 
     const projects = projectsRes.data || [];
     const contractors = contractorsRes.data || [];
+    setContractors(contractors);
     const teams = teamsRes.data || [];
     const payments = paymentsRes.data || [];
 
@@ -106,6 +137,29 @@ export function PaymentSummary() {
     });
 
     setStatusSummaries(Array.from(statusMap.values()));
+
+    const assignmentRows = teams.map((team) => {
+      const project = projects.find(p => p.id === team.project_id);
+      const contractor = contractors.find(c => c.id === team.contractor_id);
+      const calculatedPay = team.payment_type === 'Fixed Amount'
+        ? Number(team.agreed_amount)
+        : (Number(project?.total_budget || 0) * Number(team.percentage_share)) / 100;
+
+      return {
+        id: team.id,
+        contractor_id: team.contractor_id,
+        contractor_name: contractor?.full_name || 'Unknown',
+        project_name: project?.name || 'Unknown',
+        responsibility: team.responsibility,
+        payment_type: team.payment_type,
+        percentage_share: Number(team.percentage_share),
+        agreed_amount: Number(team.agreed_amount),
+        payment_status: team.payment_status,
+        calculated_pay: calculatedPay,
+      };
+    });
+
+    setAssignments(assignmentRows);
     setLoading(false);
   };
 
@@ -166,6 +220,23 @@ export function PaymentSummary() {
     }
   };
 
+  const openContractorProfile = (contractorId: string) => {
+    const contractor = contractors.find(c => c.id === contractorId) || null;
+    if (!contractor) {
+      toast({ title: 'Contractor not found', description: 'This contractor record is unavailable.', variant: 'destructive' });
+      return;
+    }
+    setViewingContractor(contractor);
+  };
+
+  const toggleStatusFilter = (status: string) => {
+    setStatusFilter(prev => (prev === status ? null : status));
+  };
+
+  const filteredAssignments = statusFilter
+    ? assignments.filter(a => a.payment_status === statusFilter)
+    : [];
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -198,26 +269,131 @@ export function PaymentSummary() {
           Assignment Payment Status Summary
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {statusSummaries.map((s) => (
-            <Card key={s.status}>
-              <CardHeader className="pb-2">
-                <CardTitle className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-muted-foreground">{s.status}</span>
-                  <Badge variant={getStatusVariant(s.status)}>{s.count}</Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-3">
-                  {getStatusIcon(s.status)}
-                  <div>
-                    <p className="text-lg sm:text-xl font-bold">{formatCurrency(s.total_amount)}</p>
-                    <p className="text-xs text-muted-foreground">{s.count} assignment{s.count !== 1 ? 's' : ''}</p>
+          {statusSummaries.map((s) => {
+            const isActive = statusFilter === s.status;
+            return (
+              <Card
+                key={s.status}
+                role="button"
+                tabIndex={0}
+                aria-pressed={isActive}
+                onClick={() => toggleStatusFilter(s.status)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    toggleStatusFilter(s.status);
+                  }
+                }}
+                className={`cursor-pointer transition ${isActive ? 'ring-2 ring-primary/40 border-primary/50' : 'hover:border-primary/40'}`}
+                title={`Show ${s.status.toLowerCase()} assignments`}
+              >
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-muted-foreground">{s.status}</span>
+                    <Badge variant={getStatusVariant(s.status)}>{s.count}</Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-3">
+                    {getStatusIcon(s.status)}
+                    <div>
+                      <p className="text-lg sm:text-xl font-bold">{formatCurrency(s.total_amount)}</p>
+                      <p className="text-xs text-muted-foreground">{s.count} assignment{s.count !== 1 ? 's' : ''}</p>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
+      </div>
+
+      <div className="mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <h2 className="text-lg font-semibold">
+            Assignment List{statusFilter ? ` - ${statusFilter}` : ''}
+          </h2>
+          {statusFilter && (
+            <Button variant="ghost" size="sm" onClick={() => setStatusFilter(null)}>
+              Clear Filter
+            </Button>
+          )}
+        </div>
+        {!statusFilter ? (
+          <div className="bg-card rounded-xl border border-border p-6 text-center">
+            <p className="text-muted-foreground">Click a status card above to view assignments.</p>
+          </div>
+        ) : filteredAssignments.length === 0 ? (
+          <div className="bg-card rounded-xl border border-border p-6 text-center">
+            <p className="text-muted-foreground">No {statusFilter.toLowerCase()} assignments found.</p>
+          </div>
+        ) : (
+          <>
+            <div className="hidden lg:block bg-card rounded-xl border border-border overflow-hidden">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Contractor</th>
+                    <th>Project</th>
+                    <th>Responsibility</th>
+                    <th>Payment Terms</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredAssignments.map((assignment) => (
+                    <tr key={assignment.id}>
+                      <td className="font-medium">{assignment.contractor_name}</td>
+                      <td>{assignment.project_name}</td>
+                      <td>{assignment.responsibility}</td>
+                      <td>
+                        {assignment.payment_type === 'Fixed Amount'
+                          ? 'Fixed Amount'
+                          : `${assignment.percentage_share}% of budget`}
+                      </td>
+                      <td>{formatCurrency(assignment.calculated_pay)}</td>
+                      <td>
+                        <Badge variant={getStatusVariant(assignment.payment_status)}>
+                          {assignment.payment_status}
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="lg:hidden grid gap-4">
+              {filteredAssignments.map((assignment) => (
+                <div key={assignment.id} className="bg-card rounded-xl border border-border p-4 space-y-3">
+                  <div>
+                    <h3 className="font-semibold">{assignment.contractor_name}</h3>
+                    <p className="text-sm text-muted-foreground">{assignment.project_name}</p>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Responsibility</span>
+                    <span className="font-medium">{assignment.responsibility}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Terms</span>
+                    <span className="font-medium">
+                      {assignment.payment_type === 'Fixed Amount'
+                        ? 'Fixed Amount'
+                        : `${assignment.percentage_share}% of budget`}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Amount</span>
+                    <span className="font-semibold">{formatCurrency(assignment.calculated_pay)}</span>
+                  </div>
+                  <Badge variant={getStatusVariant(assignment.payment_status)}>
+                    {assignment.payment_status}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </div>
       
       <div className="relative max-w-full sm:max-w-sm mb-6">
@@ -241,6 +417,11 @@ export function PaymentSummary() {
           <p className="text-sm text-muted-foreground">Balance Due</p>
         </div>
       </div>
+      <ViewContractorDialog
+        contractor={viewingContractor}
+        open={!!viewingContractor}
+        onOpenChange={(open) => !open && setViewingContractor(null)}
+      />
       
       {filtered.length === 0 ? (
         <div className="bg-card rounded-xl border border-border p-12 text-center">
@@ -257,6 +438,7 @@ export function PaymentSummary() {
                   <th>Total Agreed Pay</th>
                   <th>Total Paid</th>
                   <th>Balance Due</th>
+                  <th className="text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -266,6 +448,11 @@ export function PaymentSummary() {
                     <td>{formatCurrency(s.total_agreed)}</td>
                     <td className="text-success">{formatCurrency(s.total_paid)}</td>
                     <td className={s.balance_due > 0 ? 'text-warning font-medium' : 'text-success'}>{formatCurrency(s.balance_due)}</td>
+                    <td className="text-right">
+                      <Button size="sm" variant="outline" onClick={() => openContractorProfile(s.contractor_id)}>
+                        View
+                      </Button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -276,7 +463,12 @@ export function PaymentSummary() {
           <div className="lg:hidden grid gap-4">
             {filtered.map((s) => (
               <div key={s.contractor_id} className="bg-card rounded-xl border border-border p-4">
-                <h3 className="font-semibold mb-3">{s.contractor_name}</h3>
+                <div className="flex items-start justify-between gap-4 mb-3">
+                  <h3 className="font-semibold">{s.contractor_name}</h3>
+                  <Button size="sm" variant="outline" onClick={() => openContractorProfile(s.contractor_id)}>
+                    View
+                  </Button>
+                </div>
                 <div className="grid grid-cols-3 gap-2 text-center">
                   <div>
                     <p className="text-xs text-muted-foreground">Agreed</p>

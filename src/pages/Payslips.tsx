@@ -195,7 +195,7 @@ export function Payslips() {
     const balanceColor = selectedPayslip.balance <= 0 ? '#10b981' : '#f59e0b';
 
     // Company branding from profile
-    const companyName = escapeHtml(profile.business_name) || 'SymbiFi';
+    const companyName = escapeHtml(profile.business_name) || 'Pavel';
     const companyLogo = profile.logo_url ? `<img src="${escapeHtml(profile.logo_url)}" alt="Company Logo" style="max-height: 60px; max-width: 200px; margin-bottom: 10px;" />` : '';
 
     printWindow.document.write(`
@@ -408,7 +408,7 @@ export function Payslips() {
                 {profile.logo_url && (
                   <img src={profile.logo_url} alt="Company Logo" className="h-12 mx-auto mb-2 object-contain" />
                 )}
-                <h1 className="text-2xl font-bold text-primary">{profile.business_name || 'SymbiFi'}</h1>
+                <h1 className="text-2xl font-bold text-primary">{profile.business_name || 'Pavel'}</h1>
                 <p className="text-muted-foreground text-sm">Payroll Management System</p>
                 <p className="text-xs text-muted-foreground mt-2">
                   Generated: {format(new Date(), 'MMMM d, yyyy')}
@@ -526,8 +526,8 @@ export function Payslips() {
 
               {/* Footer */}
               <div className="footer mt-8 text-center text-muted-foreground text-xs">
-                <p>This is a computer-generated payslip from {profile.business_name || 'SymbiFi'} Payroll Management System.</p>
-                <p>© {new Date().getFullYear()} {profile.business_name || 'SymbiFi'}. All rights reserved.</p>
+                <p>This is a computer-generated payslip from {profile.business_name || 'Pavel'} Payroll Management System.</p>
+                <p>© {new Date().getFullYear()} {profile.business_name || 'Pavel'}. All rights reserved.</p>
               </div>
             </div>
           )}

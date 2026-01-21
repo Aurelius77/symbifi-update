@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '@/hooks/useUserProfile';
-import { Plus, Search, Edit2, Trash2, CreditCard, Calendar, Building, Download } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, CreditCard, Calendar, Building, Download, Eye, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { exportToCSV, formatDateForCSV, formatCurrencyForCSV } from '@/lib/csv-export';
+import { ViewContractorDialog } from '@/components/contractors/ViewContractorDialog';
 
 interface Project {
   id: string;
@@ -20,6 +21,13 @@ interface Project {
 interface Contractor {
   id: string;
   full_name: string;
+  role: string;
+  email: string;
+  phone: string | null;
+  bank_wallet_details: string | null;
+  contractor_type: string;
+  status: string;
+  created_at?: string;
 }
 
 interface Payment {
@@ -46,6 +54,9 @@ export function Payments() {
   const [filterProject, setFilterProject] = useState<string>('all');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [viewPayment, setViewPayment] = useState<Payment | null>(null);
+  const [viewingContractor, setViewingContractor] = useState<Contractor | null>(null);
   const [formData, setFormData] = useState({
     project_id: '',
     contractor_id: '',
@@ -137,6 +148,20 @@ export function Payments() {
       recorded_by: payment.recorded_by || '',
     });
     setDialogOpen(true);
+  };
+
+  const openView = (payment: Payment) => {
+    setViewPayment(payment);
+    setViewDialogOpen(true);
+  };
+
+  const openContractorProfile = (contractorId: string) => {
+    const contractor = contractors.find(c => c.id === contractorId) || null;
+    if (!contractor) {
+      toast({ title: 'Contractor not found', description: 'This contractor record is unavailable.', variant: 'destructive' });
+      return;
+    }
+    setViewingContractor(contractor);
   };
 
   const getProjectName = (id: string) => projects.find(p => p.id === id)?.name || 'Unknown';
@@ -284,9 +309,68 @@ export function Payments() {
               </div>
             </form>
           </DialogContent>
-        </Dialog>
+          </Dialog>
         </div>
       </div>
+      <Dialog
+        open={viewDialogOpen}
+        onOpenChange={(open) => {
+          setViewDialogOpen(open);
+          if (!open) {
+            setViewPayment(null);
+          }
+        }}
+      >
+        {viewPayment ? (
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Payment Details</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 mt-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-muted-foreground">Contractor</p>
+                  <p className="font-medium">{getContractorName(viewPayment.contractor_id)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Project</p>
+                  <p className="font-medium">{getProjectName(viewPayment.project_id)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Date</p>
+                  <p className="font-medium">{format(new Date(viewPayment.payment_date), 'MMM d, yyyy')}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Amount</p>
+                  <p className="font-semibold text-primary">{formatCurrency(viewPayment.amount_paid)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Method</p>
+                  <p className="font-medium">{viewPayment.payment_method}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Reference</p>
+                  <p className="font-medium">{viewPayment.reference || '-'}</p>
+                </div>
+                <div className="sm:col-span-2">
+                  <p className="text-xs text-muted-foreground">Recorded By</p>
+                  <p className="font-medium">{viewPayment.recorded_by || '-'}</p>
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <Button type="button" variant="outline" onClick={() => setViewDialogOpen(false)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        ) : null}
+      </Dialog>
+      <ViewContractorDialog
+        contractor={viewingContractor}
+        open={!!viewingContractor}
+        onOpenChange={(open) => !open && setViewingContractor(null)}
+      />
 
       {/* Summary Card */}
       <div className="bg-primary/10 rounded-xl p-4 mb-6">
@@ -350,6 +434,12 @@ export function Payments() {
                     <td className="text-muted-foreground">{payment.reference || '-'}</td>
                     <td className="text-right">
                       <div className="flex justify-end gap-2">
+                        <Button size="icon" variant="ghost" onClick={() => openContractorProfile(payment.contractor_id)}>
+                          <User className="w-4 h-4" />
+                        </Button>
+                        <Button size="icon" variant="ghost" onClick={() => openView(payment)}>
+                          <Eye className="w-4 h-4" />
+                        </Button>
                         <Button size="icon" variant="ghost" onClick={() => openEdit(payment)}>
                           <Edit2 className="w-4 h-4" />
                         </Button>
@@ -388,6 +478,12 @@ export function Payments() {
                     {payment.reference && <span className="ml-2 text-xs">• {payment.reference}</span>}
                   </div>
                   <div className="flex gap-2">
+                    <Button size="icon" variant="outline" onClick={() => openContractorProfile(payment.contractor_id)}>
+                      <User className="w-4 h-4" />
+                    </Button>
+                    <Button size="icon" variant="outline" onClick={() => openView(payment)}>
+                      <Eye className="w-4 h-4" />
+                    </Button>
                     <Button size="icon" variant="outline" onClick={() => openEdit(payment)}>
                       <Edit2 className="w-4 h-4" />
                     </Button>

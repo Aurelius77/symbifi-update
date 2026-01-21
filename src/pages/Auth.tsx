@@ -115,7 +115,7 @@ export function Auth() {
             <Wallet className="w-6 h-6 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">SymbiFi</h1>
+            <h1 className="text-2xl font-bold text-foreground">Pavel</h1>
             <p className="text-xs text-muted-foreground">Payroll Manager</p>
           </div>
         </Link>
@@ -128,7 +128,7 @@ export function Auth() {
             <CardDescription>
               {isSignUp 
                 ? 'Sign up to start managing your contractor payments' 
-                : 'Sign in to your SymbiFi account'
+                : 'Sign in to your Pavel account'
               }
             </CardDescription>
           </CardHeader>
