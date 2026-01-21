@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { useSubscription } from '@/hooks/useSubscription';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -42,6 +43,7 @@ interface Project {
 export function Projects() {
   const { user } = useAuth();
   const { formatCurrency, getCurrencySymbol } = useUserProfile();
+  const { limits, tierLabel, loading: subscriptionLoading } = useSubscription();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
@@ -63,6 +65,19 @@ export function Projects() {
   useEffect(() => {
     if (user) fetchProjects();
   }, [user]);
+
+  const activeProjectsCount = projects.filter((project) => project.status === 'Active').length;
+  const activeProjectLimit = limits.activeProjects;
+  const activeProjectLimitReached =
+    !subscriptionLoading &&
+    activeProjectLimit !== null &&
+    activeProjectsCount >= activeProjectLimit;
+  const isCreatingActiveProject = !editingProject && formData.status === 'Active';
+  const isUpdatingToActive =
+    !!editingProject &&
+    editingProject.status !== 'Active' &&
+    formData.status === 'Active';
+  const activeProjectBlocked = (isCreatingActiveProject || isUpdatingToActive) && activeProjectLimitReached;
 
   const fetchProjects = async () => {
     setLoading(true);
@@ -91,6 +106,11 @@ export function Projects() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (activeProjectBlocked) {
+      toast.error('Active project limit reached for your plan.');
+      return;
+    }
     
     const projectData = {
       user_id: user!.id,
@@ -180,6 +200,11 @@ export function Projects() {
         <div>
           <h1 className="page-title">Projects</h1>
           <p className="page-description">Manage your client projects and budgets</p>
+          {activeProjectLimit !== null && (
+            <p className="text-xs text-muted-foreground mt-2">
+              {tierLabel} plan: {activeProjectsCount}/{activeProjectLimit} active projects
+            </p>
+          )}
         </div>
         <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) resetForm(); }}>
           <DialogTrigger asChild>
@@ -239,6 +264,16 @@ export function Projects() {
                     <SelectItem value="On Hold">On Hold</SelectItem>
                   </SelectContent>
                 </Select>
+                {activeProjectLimit !== null && (
+                  <p className="text-xs text-muted-foreground">
+                    {activeProjectsCount}/{activeProjectLimit} active projects used on the {tierLabel} plan.
+                  </p>
+                )}
+                {activeProjectBlocked && (
+                  <p className="text-xs text-destructive">
+                    Upgrade your plan to add more active projects.
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="notes">Notes</Label>
@@ -246,7 +281,9 @@ export function Projects() {
               </div>
               <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-4">
                 <Button type="button" variant="outline" onClick={() => { setIsOpen(false); resetForm(); }} className="w-full sm:w-auto">Cancel</Button>
-                <Button type="submit" className="w-full sm:w-auto">{editingProject ? 'Update' : 'Create'} Project</Button>
+                <Button type="submit" className="w-full sm:w-auto" disabled={activeProjectBlocked}>
+                  {editingProject ? 'Update' : 'Create'} Project
+                </Button>
               </div>
             </form>
           </DialogContent>

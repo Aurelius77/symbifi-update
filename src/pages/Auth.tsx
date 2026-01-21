@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Wallet, Mail, Lock, User, AlertCircle } from 'lucide-react';
+import { Wallet, Mail, Lock, User, AlertCircle, Chrome } from 'lucide-react';
 import { z } from 'zod';
 
 const emailSchema = z.string().email('Please enter a valid email address');
@@ -14,9 +14,10 @@ const nameSchema = z.string().min(2, 'Name must be at least 2 characters');
 
 export function Auth() {
   const navigate = useNavigate();
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, signInWithGoogle } = useAuth();
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
@@ -106,6 +107,17 @@ export function Auth() {
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    setError(null);
+    setOauthLoading(true);
+
+    const { error } = await signInWithGoogle();
+    if (error) {
+      setError(error.message);
+      setOauthLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md animate-fade-in">
@@ -133,6 +145,26 @@ export function Auth() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full mb-4 bg-white text-[#3c4043] border-[#dadce0] hover:bg-[#f8f9fa] hover:text-[#3c4043] shadow-sm"
+              onClick={handleGoogleSignIn}
+              disabled={loading || oauthLoading}
+            >
+              <img src="/icons8-google.svg" alt="" className="w-4 h-4" />
+              Continue with Google
+            </Button>
+
+            <div className="relative mb-4">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-border" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-card px-2 text-muted-foreground">or</span>
+              </div>
+            </div>
+
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && (
                 <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">

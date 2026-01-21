@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSubscription } from '@/hooks/useSubscription';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -40,6 +41,7 @@ interface Contractor {
 
 export function Contractors() {
   const { user } = useAuth();
+  const { limits, tierLabel, loading: subscriptionLoading } = useSubscription();
   const [contractors, setContractors] = useState<Contractor[]>([]);
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
@@ -61,6 +63,12 @@ export function Contractors() {
   useEffect(() => {
     if (user) fetchContractors();
   }, [user]);
+
+  const contractorLimit = limits.contractors;
+  const contractorLimitReached =
+    !subscriptionLoading &&
+    contractorLimit !== null &&
+    contractors.length >= contractorLimit;
 
   const fetchContractors = async () => {
     setLoading(true);
@@ -88,6 +96,11 @@ export function Contractors() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!editingContractor && contractorLimitReached) {
+      toast.error('Contractor limit reached for your plan.');
+      return;
+    }
     
     const contractorData = {
       user_id: user!.id,
@@ -167,10 +180,18 @@ export function Contractors() {
         <div>
           <h1 className="page-title">Contractors</h1>
           <p className="page-description">Manage your team of contractors and collaborators</p>
+          {contractorLimit !== null && (
+            <p className="text-xs text-muted-foreground mt-2">
+              {tierLabel} plan: {contractors.length}/{contractorLimit} contractors
+            </p>
+          )}
         </div>
         <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) resetForm(); }}>
           <DialogTrigger asChild>
-            <Button className="gap-2 w-full sm:w-auto"><Plus className="w-4 h-4" />Add Contractor</Button>
+            <Button className="gap-2 w-full sm:w-auto" disabled={contractorLimitReached}>
+              <Plus className="w-4 h-4" />
+              Add Contractor
+            </Button>
           </DialogTrigger>
           <DialogContent className="max-w-[95vw] sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
@@ -256,7 +277,7 @@ export function Contractors() {
           {filteredContractors.map((contractor) => (
             <div key={contractor.id} className="bg-card rounded-xl border border-border p-4 sm:p-5 animate-slide-up">
               <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
                   <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                     <User className="w-5 h-5 text-primary" />
                   </div>
@@ -274,7 +295,7 @@ export function Contractors() {
                 {contractor.phone && <p className="text-muted-foreground">{contractor.phone}</p>}
                 <p className="text-xs text-muted-foreground/70">{contractor.contractor_type}</p>
               </div>
-              <div className="flex gap-2 mt-4 pt-4 border-t border-border">
+              <div className="flex flex-wrap sm:flex-nowrap gap-2 mt-4 pt-4 border-t border-border">
                 <Button variant="outline" size="sm" onClick={() => setViewingContractor(contractor)} className="flex-1">
                   <Eye className="w-4 h-4 mr-1" /> View
                 </Button>

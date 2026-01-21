@@ -340,6 +340,39 @@ export type Database = {
         }
         Relationships: []
       }
+      subscriptions: {
+        Row: {
+          billing_interval: string
+          created_at: string
+          current_period_end: string | null
+          id: string
+          status: string
+          tier: Database["public"]["Enums"]["plan_tier"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          billing_interval?: string
+          created_at?: string
+          current_period_end?: string | null
+          id?: string
+          status?: string
+          tier?: Database["public"]["Enums"]["plan_tier"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          billing_interval?: string
+          created_at?: string
+          current_period_end?: string | null
+          id?: string
+          status?: string
+          tier?: Database["public"]["Enums"]["plan_tier"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -366,6 +399,25 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_add_contractor: {
+        Args: Record<string, never>
+        Returns: boolean
+      }
+      can_set_active_project: {
+        Args: {
+          _project_id: string | null
+          _status: string
+        }
+        Returns: boolean
+      }
+      current_plan_tier: {
+        Args: Record<string, never>
+        Returns: Database["public"]["Enums"]["plan_tier"]
+      }
+      delete_own_account: {
+        Args: Record<string, never>
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -373,9 +425,16 @@ export type Database = {
         }
         Returns: boolean
       }
+      set_subscription_tier: {
+        Args: {
+          _tier: Database["public"]["Enums"]["plan_tier"]
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "user"
+      plan_tier: "free" | "starter" | "agency" | "large_agency"
     }
     CompositeTypes: {
       [_ in never]: never

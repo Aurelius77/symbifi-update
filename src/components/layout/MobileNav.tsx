@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   FolderKanban, 
@@ -9,6 +9,7 @@ import {
   FileText, 
   Settings,
   Wallet,
+  User,
   Menu,
   ShieldCheck,
   Receipt,
@@ -18,6 +19,7 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserProfile } from '@/hooks/useUserProfile';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -39,7 +41,13 @@ const adminNavigation = [
 export function MobileNav() {
   const [open, setOpen] = useState(false);
   const location = useLocation();
-  const { userRole } = useAuth();
+  const { userRole, signOut } = useAuth();
+  const { profile } = useUserProfile();
+
+  const handleSignOut = async () => {
+    await signOut();
+    setOpen(false);
+  };
 
   return (
     <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-sidebar border-b border-sidebar-border" style={{ background: 'var(--gradient-sidebar)' }}>
@@ -51,13 +59,26 @@ export function MobileNav() {
           <h1 className="text-lg font-bold text-sidebar-foreground">Pavel</h1>
         </div>
         
-        <Sheet open={open} onOpenChange={setOpen}>
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="text-sidebar-foreground hover:bg-sidebar-accent">
-              <Menu className="w-6 h-6" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="w-72 p-0 bg-sidebar border-sidebar-border" style={{ background: 'var(--gradient-sidebar)' }}>
+        <div className="flex items-center gap-2">
+          <Link
+            to="/settings"
+            className="w-9 h-9 rounded-full bg-sidebar-accent flex items-center justify-center overflow-hidden border border-sidebar-border hover:bg-sidebar-accent/80 transition-colors"
+            aria-label="Open settings"
+          >
+            {profile.logo_url ? (
+              <img src={profile.logo_url} alt="Business logo" className="w-full h-full object-cover" />
+            ) : (
+              <User className="w-4 h-4 text-sidebar-foreground/80" />
+            )}
+          </Link>
+
+          <Sheet open={open} onOpenChange={setOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="text-sidebar-foreground hover:bg-sidebar-accent">
+                <Menu className="w-6 h-6" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-72 p-0 bg-sidebar border-sidebar-border" style={{ background: 'var(--gradient-sidebar)' }}>
             <div className="p-6 border-b border-sidebar-border">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-sidebar-primary flex items-center justify-center">
@@ -101,11 +122,18 @@ export function MobileNav() {
                 </>
               )}
             </nav>
-            <div className="p-4 border-t border-sidebar-border">
-              <p className="text-xs text-sidebar-foreground/50 text-center">© 2024 Pavel</p>
+            <div className="p-4 border-t border-sidebar-border space-y-3">
+              <p className="text-xs text-sidebar-foreground/50 text-center">© 2026 Pavel</p>
+              <Button
+                className="w-full bg-white text-destructive hover:bg-white/90"
+                onClick={handleSignOut}
+              >
+                Log out
+              </Button>
             </div>
-          </SheetContent>
-        </Sheet>
+            </SheetContent>
+          </Sheet>
+        </div>
       </div>
     </div>
   );

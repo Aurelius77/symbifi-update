@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -5,7 +6,9 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { User, Mail, Phone, CreditCard, Briefcase, Calendar } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useUserProfile } from '@/hooks/useUserProfile';
+import { User, Mail, Phone, CreditCard, Briefcase, Calendar, FolderKanban, Wallet } from 'lucide-react';
 
 interface Contractor {
   id: string;
@@ -26,6 +29,77 @@ interface ViewContractorDialogProps {
 }
 
 export function ViewContractorDialog({ contractor, open, onOpenChange }: ViewContractorDialogProps) {
+  const { formatCurrency } = useUserProfile();
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [statsError, setStatsError] = useState<string | null>(null);
+  const [stats, setStats] = useState({
+    projectsCount: 0,
+    totalIncome: 0,
+    totalPaid: 0,
+    totalOutstanding: 0,
+  });
+
+  useEffect(() => {
+    if (!contractor || !open) return;
+
+    const fetchStats = async () => {
+      setStatsLoading(true);
+      setStatsError(null);
+      setStats({
+        projectsCount: 0,
+        totalIncome: 0,
+        totalPaid: 0,
+        totalOutstanding: 0,
+      });
+
+      const [teamsRes, paymentsRes] = await Promise.all([
+        supabase
+          .from('project_teams')
+          .select('project_id, agreed_amount, percentage_share, payment_type, projects ( total_budget )')
+          .eq('contractor_id', contractor.id),
+        supabase
+          .from('payments')
+          .select('amount_paid')
+          .eq('contractor_id', contractor.id),
+      ]);
+
+      if (teamsRes.error || paymentsRes.error) {
+        setStatsError('Unable to load contractor history.');
+        setStatsLoading(false);
+        return;
+      }
+
+      const teams = (teamsRes.data || []) as Array<{
+        project_id: string;
+        agreed_amount: number | null;
+        percentage_share: number | null;
+        payment_type: string;
+        projects?: { total_budget: number | null } | null;
+      }>;
+      const payments = (paymentsRes.data || []) as Array<{ amount_paid: number | null }>;
+      const projectsCount = new Set(teams.map((team) => team.project_id)).size;
+      const totalIncome = teams.reduce((sum, team) => {
+        if (team.payment_type === 'Fixed Amount') {
+          return sum + Number(team.agreed_amount || 0);
+        }
+        const projectBudget = Number(team.projects?.total_budget || 0);
+        return sum + (projectBudget * Number(team.percentage_share || 0)) / 100;
+      }, 0);
+      const totalPaid = payments.reduce((sum, payment) => sum + Number(payment.amount_paid || 0), 0);
+      const totalOutstanding = Math.max(totalIncome - totalPaid, 0);
+
+      setStats({
+        projectsCount,
+        totalIncome,
+        totalPaid,
+        totalOutstanding,
+      });
+      setStatsLoading(false);
+    };
+
+    fetchStats();
+  }, [contractor, open]);
+
   if (!contractor) return null;
 
   return (
@@ -128,6 +202,55 @@ export function ViewContractorDialog({ contractor, open, onOpenChange }: ViewCon
               </div>
             </div>
           )}
+
+          {/* History & Totals */}
+          <div className="space-y-4">
+            <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+              History & Totals
+            </h4>
+            {statsError ? (
+              <div className="text-sm text-destructive">{statsError}</div>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                  <FolderKanban className="w-4 h-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Projects</p>
+                    <p className="text-sm font-medium">
+                      {statsLoading ? 'Loading...' : stats.projectsCount}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                  <Wallet className="w-4 h-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Total income</p>
+                    <p className="text-sm font-medium">
+                      {statsLoading ? 'Loading...' : formatCurrency(stats.totalIncome)}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                  <Wallet className="w-4 h-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Total paid</p>
+                    <p className="text-sm font-medium">
+                      {statsLoading ? 'Loading...' : formatCurrency(stats.totalPaid)}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                  <Wallet className="w-4 h-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Outstanding</p>
+                    <p className="text-sm font-medium">
+                      {statsLoading ? 'Loading...' : formatCurrency(stats.totalOutstanding)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>
