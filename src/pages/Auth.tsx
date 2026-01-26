@@ -1,16 +1,25 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Wallet, Mail, Lock, User, AlertCircle, Chrome } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Wallet, Mail, Lock, User, AlertCircle, Chrome, KeyRound } from 'lucide-react';
 import { z } from 'zod';
 
 const emailSchema = z.string().email('Please enter a valid email address');
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
 const nameSchema = z.string().min(2, 'Name must be at least 2 characters');
+const businessSchema = z.string().min(2, 'Business name must be at least 2 characters');
 
 export function Auth() {
   const navigate = useNavigate();
@@ -19,17 +28,32 @@ export function Auth() {
   const [loading, setLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [resetOpen, setResetOpen] = useState(false);
+  const [resetStep, setResetStep] = useState<'request' | 'verify'>('request');
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
+  const [resetNotice, setResetNotice] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     fullName: '',
+    businessName: '',
+  });
+
+  const [resetForm, setResetForm] = useState({
+    email: '',
+    token: '',
+    newPassword: '',
+    confirmPassword: '',
   });
 
   const [fieldErrors, setFieldErrors] = useState({
     email: '',
     password: '',
     fullName: '',
+    businessName: '',
   });
 
   const validateField = (field: string, value: string) => {
@@ -40,6 +64,8 @@ export function Auth() {
         passwordSchema.parse(value);
       } else if (field === 'fullName' && isSignUp) {
         nameSchema.parse(value);
+      } else if (field === 'businessName' && isSignUp && value.trim()) {
+        businessSchema.parse(value);
       }
       return '';
     } catch (e) {
@@ -54,22 +80,26 @@ export function Auth() {
     setFormData({ ...formData, [field]: value });
     setFieldErrors({ ...fieldErrors, [field]: validateField(field, value) });
     setError(null);
+    setNotice(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setNotice(null);
     
     // Validate all fields
     const emailError = validateField('email', formData.email);
     const passwordError = validateField('password', formData.password);
     const nameError = isSignUp ? validateField('fullName', formData.fullName) : '';
+    const businessError = isSignUp ? validateField('businessName', formData.businessName) : '';
     
-    if (emailError || passwordError || nameError) {
+    if (emailError || passwordError || nameError || businessError) {
       setFieldErrors({
         email: emailError,
         password: passwordError,
         fullName: nameError,
+        businessName: businessError,
       });
       return;
     }
@@ -78,7 +108,12 @@ export function Auth() {
 
     try {
       if (isSignUp) {
-        const { error } = await signUp(formData.email, formData.password, formData.fullName);
+        const { error } = await signUp(
+          formData.email,
+          formData.password,
+          formData.fullName,
+          formData.businessName.trim() || undefined
+        );
         if (error) {
           if (error.message.includes('already registered')) {
             setError('This email is already registered. Please sign in instead.');
@@ -86,7 +121,14 @@ export function Auth() {
             setError(error.message);
           }
         } else {
-          navigate('/');
+          setNotice('Verification email sent. Please check your inbox and click the link to activate your account.');
+          setFormData({
+            email: formData.email,
+            password: '',
+            fullName: '',
+            businessName: '',
+          });
+          setIsSignUp(false);
         }
       } else {
         const { error } = await signIn(formData.email, formData.password);
@@ -116,6 +158,85 @@ export function Auth() {
       setError(error.message);
       setOauthLoading(false);
     }
+  };
+
+  const handleResetRequest = async () => {
+    setResetError(null);
+    setResetNotice(null);
+
+    const emailError = validateField('email', resetForm.email);
+    if (emailError) {
+      setResetError(emailError);
+      return;
+    }
+
+    setResetLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(resetForm.email, {
+      redirectTo: `${window.location.origin}/auth`,
+    });
+
+    if (error) {
+      setResetError(error.message);
+    } else {
+      setResetNotice('We sent a reset code to your email. Enter it below to continue.');
+      setResetStep('verify');
+    }
+
+    setResetLoading(false);
+  };
+
+  const handleResetVerify = async () => {
+    setResetError(null);
+    setResetNotice(null);
+
+    if (!resetForm.token.trim()) {
+      setResetError('Enter the reset code from your email.');
+      return;
+    }
+
+    if (resetForm.newPassword.trim().length < 6) {
+      setResetError('Password must be at least 6 characters.');
+      return;
+    }
+
+    if (resetForm.newPassword !== resetForm.confirmPassword) {
+      setResetError('Passwords do not match.');
+      return;
+    }
+
+    setResetLoading(true);
+    const { error: verifyError } = await supabase.auth.verifyOtp({
+      email: resetForm.email,
+      token: resetForm.token,
+      type: 'recovery',
+    });
+
+    if (verifyError) {
+      setResetError(verifyError.message);
+      setResetLoading(false);
+      return;
+    }
+
+    const { error: updateError } = await supabase.auth.updateUser({
+      password: resetForm.newPassword,
+    });
+
+    if (updateError) {
+      setResetError(updateError.message);
+      setResetLoading(false);
+      return;
+    }
+
+    await supabase.auth.signOut();
+    setResetLoading(false);
+    setResetOpen(false);
+    setResetForm({
+      email: '',
+      token: '',
+      newPassword: '',
+      confirmPassword: '',
+    });
+    setNotice('Password updated. Please sign in with your new password.');
   };
 
   return (
@@ -172,23 +293,45 @@ export function Auth() {
                   <span>{error}</span>
                 </div>
               )}
+              {notice && (
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/10 text-primary text-sm">
+                  <Mail className="w-4 h-4 shrink-0" />
+                  <span>{notice}</span>
+                </div>
+              )}
 
               {isSignUp && (
-                <div className="space-y-2">
-                  <Label htmlFor="fullName">Full Name</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      id="fullName"
-                      placeholder="John Doe"
-                      value={formData.fullName}
-                      onChange={(e) => handleChange('fullName', e.target.value)}
-                      className="pl-9"
-                    />
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="fullName">Full Name</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        id="fullName"
+                        placeholder="John Doe"
+                        value={formData.fullName}
+                        onChange={(e) => handleChange('fullName', e.target.value)}
+                        className="pl-9"
+                        required
+                      />
+                    </div>
+                    {fieldErrors.fullName && (
+                      <p className="text-xs text-destructive">{fieldErrors.fullName}</p>
+                    )}
                   </div>
-                  {fieldErrors.fullName && (
-                    <p className="text-xs text-destructive">{fieldErrors.fullName}</p>
-                  )}
+
+                  <div className="space-y-2">
+                    <Label htmlFor="businessName">Business / Agency Name (optional)</Label>
+                    <Input
+                      id="businessName"
+                      placeholder="Pavel Agency"
+                      value={formData.businessName}
+                      onChange={(e) => handleChange('businessName', e.target.value)}
+                    />
+                    {fieldErrors.businessName && (
+                      <p className="text-xs text-destructive">{fieldErrors.businessName}</p>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -203,6 +346,7 @@ export function Auth() {
                     value={formData.email}
                     onChange={(e) => handleChange('email', e.target.value)}
                     className="pl-9"
+                    required
                   />
                 </div>
                 {fieldErrors.email && (
@@ -211,7 +355,130 @@ export function Auth() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Password</Label>
+                  <Dialog
+                    open={resetOpen}
+                    onOpenChange={(open) => {
+                      setResetOpen(open);
+                      if (open) {
+                        setResetForm((prev) => ({
+                          ...prev,
+                          email: formData.email || prev.email,
+                        }));
+                      } else {
+                        setResetStep('request');
+                        setResetError(null);
+                        setResetNotice(null);
+                        setResetForm({
+                          email: '',
+                          token: '',
+                          newPassword: '',
+                          confirmPassword: '',
+                        });
+                      }
+                    }}
+                  >
+                    <DialogTrigger asChild>
+                      <button type="button" className="text-xs text-primary hover:underline">
+                        Forgot password?
+                      </button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-[95vw] sm:max-w-[480px]">
+                      <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                          <KeyRound className="w-4 h-4" />
+                          Reset password
+                        </DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        {resetError && (
+                          <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+                            <AlertCircle className="w-4 h-4 shrink-0" />
+                            <span>{resetError}</span>
+                          </div>
+                        )}
+                        {resetNotice && (
+                          <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/10 text-primary text-sm">
+                            <Mail className="w-4 h-4 shrink-0" />
+                            <span>{resetNotice}</span>
+                          </div>
+                        )}
+
+                        <div className="space-y-2">
+                          <Label htmlFor="reset-email">Email</Label>
+                          <Input
+                            id="reset-email"
+                            type="email"
+                            placeholder="you@example.com"
+                            value={resetForm.email}
+                            onChange={(e) =>
+                              setResetForm((prev) => ({ ...prev, email: e.target.value }))
+                            }
+                            disabled={resetStep === 'verify'}
+                          />
+                        </div>
+
+                        {resetStep === 'verify' && (
+                          <>
+                            <div className="space-y-2">
+                              <Label htmlFor="reset-token">Reset code</Label>
+                              <Input
+                                id="reset-token"
+                                placeholder="Enter the code from your email"
+                                value={resetForm.token}
+                                onChange={(e) =>
+                                  setResetForm((prev) => ({ ...prev, token: e.target.value }))
+                                }
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="reset-password">New password</Label>
+                              <Input
+                                id="reset-password"
+                                type="password"
+                                value={resetForm.newPassword}
+                                onChange={(e) =>
+                                  setResetForm((prev) => ({
+                                    ...prev,
+                                    newPassword: e.target.value,
+                                  }))
+                                }
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="reset-confirm-password">Confirm password</Label>
+                              <Input
+                                id="reset-confirm-password"
+                                type="password"
+                                value={resetForm.confirmPassword}
+                                onChange={(e) =>
+                                  setResetForm((prev) => ({
+                                    ...prev,
+                                    confirmPassword: e.target.value,
+                                  }))
+                                }
+                              />
+                            </div>
+                          </>
+                        )}
+
+                        <Button
+                          type="button"
+                          className="w-full"
+                          onClick={resetStep === 'request' ? handleResetRequest : handleResetVerify}
+                          disabled={resetLoading}
+                        >
+                          {resetLoading
+                            ? 'Please wait...'
+                            : resetStep === 'request'
+                            ? 'Send reset code'
+                            : 'Update password'}
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
@@ -221,6 +488,7 @@ export function Auth() {
                     value={formData.password}
                     onChange={(e) => handleChange('password', e.target.value)}
                     className="pl-9"
+                    required
                   />
                 </div>
                 {fieldErrors.password && (
@@ -244,7 +512,8 @@ export function Auth() {
                   onClick={() => {
                     setIsSignUp(!isSignUp);
                     setError(null);
-                    setFieldErrors({ email: '', password: '', fullName: '' });
+                    setNotice(null);
+                    setFieldErrors({ email: '', password: '', fullName: '', businessName: '' });
                   }}
                   className="ml-1 text-primary hover:underline font-medium"
                 >

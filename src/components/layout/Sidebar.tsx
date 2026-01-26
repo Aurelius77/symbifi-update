@@ -14,6 +14,7 @@ const navigation = [
   { name: 'Payment Summary', href: '/payment-summary', icon: FileText },
   { name: 'Payroll Reports', href: '/payroll-reports', icon: BarChart3 },
   { name: 'Payslips', href: '/payslips', icon: FileCheck },
+  { name: 'Pricing', href: '/pricing', icon: CreditCard },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
 

@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
 export interface UserProfile {
+  full_name: string | null;
   business_name: string | null;
   industry: string | null;
   country: string | null;
@@ -11,6 +12,7 @@ export interface UserProfile {
 }
 
 const DEFAULT_PROFILE: UserProfile = {
+  full_name: null,
   business_name: null,
   industry: null,
   country: 'NG',
@@ -32,12 +34,13 @@ export function useUserProfile() {
 
     const { data, error } = await supabase
       .from('profiles')
-      .select('business_name, industry, country, currency, logo_url')
+      .select('full_name, business_name, industry, country, currency, logo_url')
       .eq('user_id', user.id)
       .single();
 
     if (!error && data) {
       setProfile({
+        full_name: data.full_name,
         business_name: data.business_name,
         industry: data.industry,
         country: data.country || 'NG',

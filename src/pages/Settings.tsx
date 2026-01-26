@@ -3,8 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '@/hooks/useUserProfile';
-import { useSubscription } from '@/hooks/useSubscription';
-import { PLAN_FEATURES, PLAN_PRICING, PLAN_LABELS, type PlanTier } from '@/lib/plans';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,14 +18,13 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from '@/components/ui/alert-dialog';
-import { Briefcase, Building2, KeyRound, LogOut, Mail, Trash2 } from 'lucide-react';
+import { Briefcase, Building2, KeyRound, LogOut, Mail, Trash2, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { ProfileSettings } from '@/components/settings/ProfileSettings';
 
 export function Settings() {
   const { user, signOut } = useAuth();
   const { profile } = useUserProfile();
-  const { subscription, limits, tierLabel, refetch } = useSubscription();
   const navigate = useNavigate();
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
@@ -38,14 +35,7 @@ export function Settings() {
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [deleteLoading, setDeleteLoading] = useState(false);
-  const [planUpdating, setPlanUpdating] = useState<PlanTier | null>(null);
 
-  const pricing = PLAN_PRICING[subscription.tier];
-  const planFeatures = PLAN_FEATURES[subscription.tier];
-  const planPriceLabel =
-    pricing.monthly === null ? 'Custom pricing' : `$${pricing.monthly} / month`;
-  const planYearlyLabel =
-    pricing.yearly === null || pricing.monthly === null ? null : `or $${pricing.yearly} / year`;
 
   const handleSignOut = async () => {
     await signOut();
@@ -119,19 +109,6 @@ export function Settings() {
     navigate('/auth');
   };
 
-  const handlePlanChange = async (tier: PlanTier) => {
-    if (tier === subscription.tier) return;
-    setPlanUpdating(tier);
-    const { error } = await supabase.rpc('set_subscription_tier', { _tier: tier });
-    if (error) {
-      toast.error(error.message || 'Unable to update plan.');
-    } else {
-      toast.success(`Switched to ${PLAN_LABELS[tier]} plan.`);
-      await refetch();
-    }
-    setPlanUpdating(null);
-  };
-
   return (
     <div className="animate-fade-in">
       <div className="page-header">
@@ -149,7 +126,16 @@ export function Settings() {
               </p>
             </div>
           </div>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-lg border border-border/60 bg-muted/30 p-3 sm:p-4">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <User className="w-3.5 h-3.5" />
+                Full name
+              </div>
+              <p className="font-medium text-sm sm:text-base break-all">
+                {profile.full_name || (user?.user_metadata?.full_name as string | undefined) || 'Not set'}
+              </p>
+            </div>
             <div className="rounded-lg border border-border/60 bg-muted/30 p-3 sm:p-4">
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Mail className="w-3.5 h-3.5" />
@@ -247,85 +233,6 @@ export function Settings() {
           </div>
 
           <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                  <Building2 className="w-4 h-4 sm:w-5 sm:h-5" />
-                  Plan & Billing
-                </CardTitle>
-                <CardDescription>Overview of your current subscription.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="rounded-lg border border-border/60 bg-muted/30 p-4">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Current plan</p>
-                  <div className="flex items-baseline gap-2 mt-1">
-                    <span className="text-lg font-semibold">{tierLabel}</span>
-                    <span className="text-xs text-muted-foreground">{planPriceLabel}</span>
-                  </div>
-                  {planYearlyLabel && (
-                    <p className="text-xs text-muted-foreground mt-1">{planYearlyLabel}</p>
-                  )}
-                </div>
-                <div className="grid gap-2 text-sm">
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Contractors</span>
-                    <span className="font-medium">
-                      {limits.contractors === null ? 'Unlimited' : limits.contractors}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Active projects</span>
-                    <span className="font-medium">
-                      {limits.activeProjects === null ? 'Unlimited' : limits.activeProjects}
-                    </span>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Includes</p>
-                  <div className="space-y-1 text-xs text-muted-foreground">
-                    {planFeatures.slice(0, 4).map((feature) => (
-                      <p key={feature}>{feature}</p>
-                    ))}
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Plan options</p>
-                  {(['free', 'starter', 'agency'] as PlanTier[]).map((tier) => {
-                    const price = PLAN_PRICING[tier];
-                    const isCurrent = tier === subscription.tier;
-                    const actionLabel = isCurrent ? 'Current plan' : `Switch to ${PLAN_LABELS[tier]}`;
-
-                    return (
-                      <div
-                        key={tier}
-                        className="flex flex-col gap-2 rounded-lg border border-border/60 bg-muted/30 p-3 sm:flex-row sm:items-center sm:justify-between"
-                      >
-                        <div>
-                          <p className="text-sm font-medium">{PLAN_LABELS[tier]}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {price.monthly === 0 ? '$0 / month' : `$${price.monthly} / month`}
-                          </p>
-                        </div>
-                        <Button
-                          variant={isCurrent ? 'secondary' : 'outline'}
-                          className="w-full sm:w-auto"
-                          onClick={() => handlePlanChange(tier)}
-                          disabled={isCurrent || planUpdating !== null}
-                        >
-                          {planUpdating === tier ? 'Updating...' : actionLabel}
-                        </Button>
-                      </div>
-                    );
-                  })}
-                  <div className="rounded-lg border border-border/60 bg-muted/30 p-3">
-                    <p className="text-sm font-medium">Large Agency</p>
-                    <p className="text-xs text-muted-foreground">Custom pricing and onboarding.</p>
-                    <p className="text-xs text-muted-foreground mt-1">Contact sales to upgrade.</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
