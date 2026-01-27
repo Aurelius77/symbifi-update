@@ -1,5 +1,5 @@
 import { Link, NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, FolderKanban, Users, UserCheck, CreditCard, Wallet, FileText, Settings, ShieldCheck, Receipt, BarChart3, FileCheck, User } from 'lucide-react';
+import { LayoutDashboard, FolderKanban, Users, UserCheck, CreditCard, FileText, Settings, Receipt, BarChart3, FileCheck, User } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { useUserProfile } from '@/hooks/useUserProfile';
@@ -18,13 +18,9 @@ const navigation = [
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
-const adminNavigation = [
-  { name: 'User Management', href: '/admin/users', icon: ShieldCheck },
-];
-
 export function Sidebar() {
   const location = useLocation();
-  const { userRole, signOut } = useAuth();
+  const { signOut } = useAuth();
   const { profile } = useUserProfile();
   
   return (
@@ -32,8 +28,8 @@ export function Sidebar() {
       <div className="p-6 border-b border-sidebar-border">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-sidebar-primary flex items-center justify-center">
-              <Wallet className="w-5 h-5 text-sidebar-primary-foreground" />
+            <div className="w-10 h-10 rounded-xl bg-sidebar-primary flex items-center justify-center overflow-hidden">
+              <img src="/pavel-icon.png" alt="Pavel" className="w-6 h-6 object-contain" />
             </div>
             <div><h1 className="text-xl font-bold text-sidebar-foreground">Pavel</h1><p className="text-xs text-sidebar-foreground/60">Payroll Manager</p></div>
           </div>
@@ -57,18 +53,6 @@ export function Sidebar() {
           </NavLink>
         ))}
         
-        {userRole === 'admin' && (
-          <>
-            <div className="pt-4 pb-2">
-              <p className="text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider px-3">Admin</p>
-            </div>
-            {adminNavigation.map((item) => (
-              <NavLink key={item.name} to={item.href} className={`nav-item ${location.pathname === item.href ? 'nav-item-active' : ''}`}>
-                <item.icon className="w-5 h-5" /><span>{item.name}</span>
-              </NavLink>
-            ))}
-          </>
-        )}
       </nav>
       <div className="p-4 border-t border-sidebar-border space-y-3">
         <p className="text-xs text-sidebar-foreground/50 text-center">© 2026 Pavel</p>

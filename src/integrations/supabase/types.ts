@@ -148,6 +148,7 @@ export type Database = {
           contractor_id: string
           created_at: string
           id: string
+          milestone_id: string | null
           payment_date: string
           payment_method: string
           project_id: string
@@ -160,6 +161,7 @@ export type Database = {
           contractor_id: string
           created_at?: string
           id?: string
+          milestone_id?: string | null
           payment_date?: string
           payment_method?: string
           project_id: string
@@ -172,6 +174,7 @@ export type Database = {
           contractor_id?: string
           created_at?: string
           id?: string
+          milestone_id?: string | null
           payment_date?: string
           payment_method?: string
           project_id?: string
@@ -185,6 +188,13 @@ export type Database = {
             columns: ["contractor_id"]
             isOneToOne: false
             referencedRelation: "contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_milestone_id_fkey"
+            columns: ["milestone_id"]
+            isOneToOne: false
+            referencedRelation: "project_milestones"
             referencedColumns: ["id"]
           },
           {
@@ -288,6 +298,59 @@ export type Database = {
           },
           {
             foreignKeyName: "project_teams_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_milestones: {
+        Row: {
+          id: string
+          user_id: string
+          project_id: string
+          title: string
+          description: string | null
+          due_date: string | null
+          amount: number | null
+          percentage: number | null
+          sequence: number
+          status: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          project_id: string
+          title: string
+          description?: string | null
+          due_date?: string | null
+          amount?: number | null
+          percentage?: number | null
+          sequence?: number
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          project_id?: string
+          title?: string
+          description?: string | null
+          due_date?: string | null
+          amount?: number | null
+          percentage?: number | null
+          sequence?: number
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_milestones_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"

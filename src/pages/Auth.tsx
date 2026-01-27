@@ -13,7 +13,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Wallet, Mail, Lock, User, AlertCircle, Chrome, KeyRound } from 'lucide-react';
+import { Mail, Lock, User, AlertCircle, Chrome, KeyRound } from 'lucide-react';
 import { z } from 'zod';
 
 const emailSchema = z.string().email('Please enter a valid email address');
@@ -244,8 +244,8 @@ export function Auth() {
       <div className="w-full max-w-md animate-fade-in">
         {/* Logo */}
         <Link to="/landing" className="flex items-center justify-center gap-3 mb-8 hover:opacity-80 transition-opacity">
-          <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center">
-            <Wallet className="w-6 h-6 text-primary-foreground" />
+          <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center overflow-hidden">
+            <img src="/pavel-icon.png" alt="Pavel" className="w-7 h-7 object-contain" />
           </div>
           <div>
             <h1 className="text-2xl font-bold text-foreground">Pavel</h1>

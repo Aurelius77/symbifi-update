@@ -1,6 +1,6 @@
 
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -111,6 +111,14 @@
     font-family: 'Inter', sans-serif;
   }
 
+  .super-admin {
+    font-family: 'Space Grotesk', sans-serif;
+  }
+
+  .super-admin .super-admin-mono {
+    font-family: 'Space Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  }
+
   h1, h2, h3, h4, h5, h6 {
     @apply font-semibold tracking-tight;
   }
@@ -191,6 +199,32 @@
 
   .badge-partial {
     @apply bg-yellow-100 text-yellow-800;
+  }
+
+  .super-admin-bg {
+    background:
+      radial-gradient(circle at 12% 12%, rgba(56, 189, 248, 0.2), transparent 45%),
+      radial-gradient(circle at 85% 18%, rgba(251, 191, 36, 0.18), transparent 40%),
+      linear-gradient(135deg, #020617 0%, #0f172a 45%, #111827 100%);
+  }
+
+  .super-admin-grid {
+    background-image:
+      linear-gradient(rgba(148, 163, 184, 0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
+
+  .super-admin-surface {
+    @apply border border-slate-800/70 bg-slate-900/70 backdrop-blur;
+  }
+
+  .super-admin-card {
+    @apply super-admin-surface rounded-2xl p-6 shadow-[0_24px_60px_rgba(2,6,23,0.35)];
+  }
+
+  .super-admin-pill {
+    @apply inline-flex items-center gap-2 rounded-full border border-slate-700/60 bg-slate-900/70 px-3 py-1 text-xs uppercase tracking-[0.2em] text-slate-300;
   }
 }
 

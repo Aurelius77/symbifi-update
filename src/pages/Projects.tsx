@@ -27,6 +27,7 @@ import { toast } from 'sonner';
 
 type ProjectStatus = 'Active' | 'Completed' | 'On Hold';
 type PaymentStructure = 'Single payment' | 'Milestones';
+type MilestoneStatus = 'Planned' | 'In Progress' | 'Approved' | 'Paid';
 
 interface Project {
   id: string;
@@ -40,6 +41,16 @@ interface Project {
   notes: string | null;
 }
 
+interface MilestoneForm {
+  id?: string;
+  title: string;
+  description: string;
+  due_date: string;
+  amount: string;
+  percentage: string;
+  status: MilestoneStatus;
+}
+
 export function Projects() {
   const { user } = useAuth();
   const { formatCurrency, getCurrencySymbol } = useUserProfile();
@@ -50,6 +61,8 @@ export function Projects() {
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<ProjectStatus | 'all'>('all');
+  const [milestones, setMilestones] = useState<MilestoneForm[]>([]);
+  const [existingMilestoneIds, setExistingMilestoneIds] = useState<string[]>([]);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -101,7 +114,117 @@ export function Projects() {
       status: 'Active',
       notes: '',
     });
+    setMilestones([]);
+    setExistingMilestoneIds([]);
     setEditingProject(null);
+  };
+
+  const createEmptyMilestone = (): MilestoneForm => ({
+    title: '',
+    description: '',
+    due_date: '',
+    amount: '',
+    percentage: '',
+    status: 'Planned',
+  });
+
+  const addMilestone = () => {
+    setMilestones((prev) => [...prev, createEmptyMilestone()]);
+  };
+
+  const updateMilestone = (index: number, updates: Partial<MilestoneForm>) => {
+    setMilestones((prev) => prev.map((item, i) => (i === index ? { ...item, ...updates } : item)));
+  };
+
+  const removeMilestone = (index: number) => {
+    setMilestones((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const fetchMilestonesForProject = async (projectId: string) => {
+    const { data, error } = await supabase
+      .from('project_milestones')
+      .select('*')
+      .eq('project_id', projectId)
+      .order('sequence', { ascending: true });
+
+    if (error) {
+      toast.error('Failed to load milestones');
+      return 0;
+    }
+
+    const mapped = (data || []).map((milestone) => ({
+      id: milestone.id as string,
+      title: milestone.title || '',
+      description: milestone.description || '',
+      due_date: milestone.due_date || '',
+      amount: milestone.amount ? String(milestone.amount) : '',
+      percentage: milestone.percentage ? String(milestone.percentage) : '',
+      status: (milestone.status as MilestoneStatus) || 'Planned',
+    }));
+
+    setMilestones(mapped);
+    setExistingMilestoneIds(mapped.map((milestone) => milestone.id!).filter(Boolean));
+    return mapped.length;
+  };
+
+  const syncMilestones = async (projectId: string) => {
+    if (!user) return { error: null as Error | null };
+
+    const rows = milestones.map((milestone, index) => ({
+      id: milestone.id,
+      user_id: user.id,
+      project_id: projectId,
+      title: milestone.title.trim(),
+      description: milestone.description.trim() || null,
+      due_date: milestone.due_date || null,
+      amount: milestone.amount ? parseFloat(milestone.amount) : null,
+      percentage: milestone.percentage ? parseFloat(milestone.percentage) : null,
+      sequence: index + 1,
+      status: milestone.status || 'Planned',
+    }));
+
+    const currentIds = rows.map((row) => row.id).filter(Boolean) as string[];
+    const idsToDelete = existingMilestoneIds.filter((id) => !currentIds.includes(id));
+
+    const errors: Error[] = [];
+
+    if (idsToDelete.length > 0) {
+      const { error } = await supabase.from('project_milestones').delete().in('id', idsToDelete);
+      if (error) errors.push(error);
+    }
+
+    const updates = rows.filter((row) => row.id);
+    const inserts = rows.filter((row) => !row.id);
+
+    const updateResults = await Promise.all(
+      updates.map((row) =>
+        supabase
+          .from('project_milestones')
+          .update({
+            title: row.title,
+            description: row.description,
+            due_date: row.due_date,
+            amount: row.amount,
+            percentage: row.percentage,
+            sequence: row.sequence,
+            status: row.status,
+          })
+          .eq('id', row.id as string),
+      ),
+    );
+
+    updateResults.forEach((result) => {
+      if (result.error) errors.push(result.error);
+    });
+
+    if (inserts.length > 0) {
+      const { error } = await supabase
+        .from('project_milestones')
+        .insert(inserts.map(({ id, ...rest }) => rest));
+      if (error) errors.push(error);
+    }
+
+    return { error: errors[0] || null };
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -124,19 +247,89 @@ export function Projects() {
       notes: formData.notes || null,
     };
 
+    if (formData.payment_structure === 'Milestones') {
+      if (milestones.length === 0) {
+        toast.error('Add at least one milestone for milestone-based projects.');
+        return;
+      }
+
+      const totalBudget = parseFloat(formData.total_budget) || 0;
+      let totalAmount = 0;
+      let totalPercentage = 0;
+      let hasAmount = false;
+      let hasPercentage = false;
+
+      for (const milestone of milestones) {
+        if (!milestone.title.trim()) {
+          toast.error('Each milestone needs a title.');
+          return;
+        }
+        const amount = parseFloat(milestone.amount);
+        const percentage = parseFloat(milestone.percentage);
+        const amountValid = !Number.isNaN(amount) && amount > 0;
+        const percentValid = !Number.isNaN(percentage) && percentage > 0;
+
+        if (!amountValid && !percentValid) {
+          toast.error('Each milestone needs an amount or percentage.');
+          return;
+        }
+
+        if (amountValid) {
+          hasAmount = true;
+          totalAmount += amount;
+        }
+        if (percentValid) {
+          hasPercentage = true;
+          totalPercentage += percentage;
+        }
+      }
+
+      if (hasAmount && !hasPercentage && totalBudget > 0 && Math.abs(totalAmount - totalBudget) > 0.01) {
+        toast.error('Milestone amounts must total the project budget.');
+        return;
+      }
+      if (hasPercentage && !hasAmount && Math.abs(totalPercentage - 100) > 0.01) {
+        toast.error('Milestone percentages must total 100%.');
+        return;
+      }
+    }
+
     if (editingProject) {
-      const { error } = await supabase.from('projects').update(projectData).eq('id', editingProject.id);
+      const { data, error } = await supabase
+        .from('projects')
+        .update(projectData)
+        .eq('id', editingProject.id)
+        .select('id')
+        .single();
       if (error) {
         toast.error('Failed to update project');
       } else {
+        if (formData.payment_structure === 'Milestones') {
+          const { error: milestoneError } = await syncMilestones(editingProject.id);
+          if (milestoneError) {
+            toast.error('Project saved but milestones failed to update.');
+          }
+        } else if (existingMilestoneIds.length > 0) {
+          await supabase.from('project_milestones').delete().eq('project_id', editingProject.id);
+        }
         toast.success('Project updated');
         fetchProjects();
       }
     } else {
-      const { error } = await supabase.from('projects').insert(projectData);
+      const { data, error } = await supabase
+        .from('projects')
+        .insert(projectData)
+        .select('id')
+        .single();
       if (error) {
         toast.error('Failed to create project');
       } else {
+        if (formData.payment_structure === 'Milestones' && data?.id) {
+          const { error: milestoneError } = await syncMilestones(data.id);
+          if (milestoneError) {
+            toast.error('Project created but milestones failed to save.');
+          }
+        }
         toast.success('Project created');
         fetchProjects();
       }
@@ -145,7 +338,7 @@ export function Projects() {
     resetForm();
   };
 
-  const handleEdit = (project: Project) => {
+  const handleEdit = async (project: Project) => {
     setEditingProject(project);
     setFormData({
       name: project.name,
@@ -157,6 +350,15 @@ export function Projects() {
       status: project.status as ProjectStatus,
       notes: project.notes || '',
     });
+    if (project.payment_structure === 'Milestones') {
+      const count = await fetchMilestonesForProject(project.id);
+      if (count === 0) {
+        setMilestones([createEmptyMilestone()]);
+      }
+    } else {
+      setMilestones([]);
+      setExistingMilestoneIds([]);
+    }
     setIsOpen(true);
   };
 
@@ -185,6 +387,17 @@ export function Projects() {
     };
     return <span className={styles[status] || 'badge-status'}>{status}</span>;
   };
+
+  const milestoneTotals = milestones.reduce(
+    (acc, milestone) => {
+      const amount = parseFloat(milestone.amount);
+      const percentage = parseFloat(milestone.percentage);
+      if (!Number.isNaN(amount)) acc.amount += amount;
+      if (!Number.isNaN(percentage)) acc.percentage += percentage;
+      return acc;
+    },
+    { amount: 0, percentage: 0 },
+  );
 
   if (loading) {
     return (
@@ -245,7 +458,19 @@ export function Projects() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="payment_structure">Payment Structure</Label>
-                  <Select value={formData.payment_structure} onValueChange={(value: PaymentStructure) => setFormData({ ...formData, payment_structure: value })}>
+                  <Select
+                    value={formData.payment_structure}
+                    onValueChange={(value: PaymentStructure) => {
+                      setFormData({ ...formData, payment_structure: value });
+                      if (value === 'Milestones' && milestones.length === 0) {
+                        setMilestones([createEmptyMilestone()]);
+                      }
+                      if (value !== 'Milestones') {
+                        setMilestones([]);
+                        setExistingMilestoneIds([]);
+                      }
+                    }}
+                  >
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Single payment">Single payment</SelectItem>
@@ -254,6 +479,114 @@ export function Projects() {
                   </Select>
                 </div>
               </div>
+              {formData.payment_structure === 'Milestones' && (
+                <div className="space-y-4 rounded-xl border border-border p-4 bg-muted/20">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-semibold">Milestone Schedule</p>
+                      <p className="text-xs text-muted-foreground">
+                        Add milestone titles with amount or percentage (or both).
+                      </p>
+                    </div>
+                    <Button type="button" variant="outline" size="sm" onClick={addMilestone}>
+                      <Plus className="w-3 h-3 mr-1" /> Add Milestone
+                    </Button>
+                  </div>
+
+                  {milestones.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No milestones yet. Add your first milestone.</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {milestones.map((milestone, index) => (
+                        <div key={milestone.id || index} className="rounded-lg border border-border/60 bg-background p-4 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm font-medium">Milestone {index + 1}</p>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeMilestone(index)}
+                              className="text-destructive"
+                            >
+                              Remove
+                            </Button>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label>Title</Label>
+                              <Input
+                                value={milestone.title}
+                                onChange={(e) => updateMilestone(index, { title: e.target.value })}
+                                placeholder="Milestone title"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Due Date</Label>
+                              <Input
+                                type="date"
+                                value={milestone.due_date}
+                                onChange={(e) => updateMilestone(index, { due_date: e.target.value })}
+                              />
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label>Amount ({getCurrencySymbol()})</Label>
+                              <Input
+                                type="number"
+                                value={milestone.amount}
+                                onChange={(e) => updateMilestone(index, { amount: e.target.value })}
+                                placeholder="0.00"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Percentage (%)</Label>
+                              <Input
+                                type="number"
+                                value={milestone.percentage}
+                                onChange={(e) => updateMilestone(index, { percentage: e.target.value })}
+                                placeholder="0"
+                              />
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label>Status</Label>
+                              <Select
+                                value={milestone.status}
+                                onValueChange={(value: MilestoneStatus) => updateMilestone(index, { status: value })}
+                              >
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Planned">Planned</SelectItem>
+                                  <SelectItem value="In Progress">In Progress</SelectItem>
+                                  <SelectItem value="Approved">Approved</SelectItem>
+                                  <SelectItem value="Paid">Paid</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Description (Optional)</Label>
+                              <Textarea
+                                value={milestone.description}
+                                onChange={(e) => updateMilestone(index, { description: e.target.value })}
+                                rows={2}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-muted-foreground">
+                    <span>
+                      Total amounts: {formatCurrency(milestoneTotals.amount)}
+                    </span>
+                    <span>Total percentages: {milestoneTotals.percentage.toFixed(2)}%</span>
+                  </div>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="status">Status</Label>
                 <Select value={formData.status} onValueChange={(value: ProjectStatus) => setFormData({ ...formData, status: value })}>

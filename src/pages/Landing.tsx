@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { useInstallPrompt } from '@/hooks/useInstallPrompt';
 import { Card, CardContent } from '@/components/ui/card';
 import { 
   Wallet, 
@@ -55,14 +56,16 @@ const benefits = [
 ];
 
 export function Landing() {
+  const { canInstall, promptInstall } = useInstallPrompt();
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-              <Wallet className="w-5 h-5 text-primary-foreground" />
+            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center overflow-hidden">
+              <img src="/pavel-icon.png" alt="Pavel" className="w-6 h-6 object-contain" />
             </div>
             <div>
               <h1 className="text-xl font-bold text-foreground">Pavel</h1>
@@ -70,6 +73,11 @@ export function Landing() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {canInstall && (
+              <Button variant="outline" size="sm" onClick={promptInstall}>
+                Install Pavel
+              </Button>
+            )}
             <Link to="/auth">
               <Button variant="ghost" size="sm">Sign In</Button>
             </Link>
@@ -197,8 +205,8 @@ export function Landing() {
         <div className="container mx-auto max-w-6xl">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                <Wallet className="w-4 h-4 text-primary-foreground" />
+              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center overflow-hidden">
+                <img src="/pavel-icon.png" alt="Pavel" className="w-5 h-5 object-contain" />
               </div>
               <span className="font-semibold text-foreground">Pavel</span>
             </div>

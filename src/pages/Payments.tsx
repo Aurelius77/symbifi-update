@@ -16,6 +16,7 @@ import { ViewContractorDialog } from '@/components/contractors/ViewContractorDia
 interface Project {
   id: string;
   name: string;
+  payment_structure?: string;
 }
 
 interface Contractor {
@@ -34,12 +35,21 @@ interface Payment {
   id: string;
   project_id: string;
   contractor_id: string;
+  milestone_id?: string | null;
   amount_paid: number;
   payment_date: string;
   payment_method: string;
   reference: string | null;
   recorded_by: string | null;
   user_id: string;
+}
+
+interface Milestone {
+  id: string;
+  project_id: string;
+  title: string;
+  sequence: number;
+  due_date: string | null;
 }
 
 export function Payments() {
@@ -49,6 +59,7 @@ export function Payments() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [contractors, setContractors] = useState<Contractor[]>([]);
+  const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterProject, setFilterProject] = useState<string>('all');
@@ -60,6 +71,7 @@ export function Payments() {
   const [formData, setFormData] = useState({
     project_id: '',
     contractor_id: '',
+    milestone_id: '',
     amount_paid: 0,
     payment_date: format(new Date(), 'yyyy-MM-dd'),
     payment_method: 'Bank Transfer',
@@ -73,15 +85,17 @@ export function Payments() {
 
   const fetchData = async () => {
     setLoading(true);
-    const [paymentsRes, projectsRes, contractorsRes] = await Promise.all([
+    const [paymentsRes, projectsRes, contractorsRes, milestonesRes] = await Promise.all([
       supabase.from('payments').select('*').order('payment_date', { ascending: false }),
       supabase.from('projects').select('*'),
       supabase.from('contractors').select('*'),
+      supabase.from('project_milestones').select('id, project_id, title, sequence, due_date'),
     ]);
 
     if (paymentsRes.data) setPayments(paymentsRes.data);
     if (projectsRes.data) setProjects(projectsRes.data);
     if (contractorsRes.data) setContractors(contractorsRes.data);
+    if (milestonesRes.data) setMilestones(milestonesRes.data);
     setLoading(false);
   };
 
@@ -93,6 +107,7 @@ export function Payments() {
       ...formData,
       reference: formData.reference || null,
       recorded_by: formData.recorded_by || null,
+      milestone_id: formData.milestone_id || null,
       user_id: user.id,
     };
 
@@ -126,6 +141,7 @@ export function Payments() {
     setFormData({
       project_id: '',
       contractor_id: '',
+      milestone_id: '',
       amount_paid: 0,
       payment_date: format(new Date(), 'yyyy-MM-dd'),
       payment_method: 'Bank Transfer',
@@ -141,6 +157,7 @@ export function Payments() {
     setFormData({
       project_id: payment.project_id,
       contractor_id: payment.contractor_id,
+      milestone_id: payment.milestone_id || '',
       amount_paid: payment.amount_paid,
       payment_date: payment.payment_date,
       payment_method: payment.payment_method,
@@ -166,6 +183,13 @@ export function Payments() {
 
   const getProjectName = (id: string) => projects.find(p => p.id === id)?.name || 'Unknown';
   const getContractorName = (id: string) => contractors.find(c => c.id === id)?.full_name || 'Unknown';
+  const getMilestoneTitle = (id?: string | null) =>
+    milestones.find(m => m.id === id)?.title || '—';
+
+  const selectedProject = projects.find(p => p.id === formData.project_id);
+  const projectMilestones = milestones
+    .filter(m => m.project_id === formData.project_id)
+    .sort((a, b) => a.sequence - b.sequence);
 
   const filtered = payments.filter(p => {
     const matchesSearch =
@@ -183,6 +207,7 @@ export function Payments() {
       date: formatDateForCSV(p.payment_date),
       contractor: getContractorName(p.contractor_id),
       project: getProjectName(p.project_id),
+      milestone: getMilestoneTitle(p.milestone_id),
       amount: formatCurrencyForCSV(p.amount_paid),
       method: p.payment_method,
       reference: p.reference || '',
@@ -193,6 +218,7 @@ export function Payments() {
       date: 'Payment Date',
       contractor: 'Contractor',
       project: 'Project',
+      milestone: 'Milestone',
       amount: `Amount (${profile.currency})`,
       method: 'Payment Method',
       reference: 'Reference',
@@ -235,7 +261,10 @@ export function Payments() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Project</Label>
-                  <Select value={formData.project_id} onValueChange={v => setFormData(f => ({ ...f, project_id: v }))}>
+                  <Select
+                    value={formData.project_id}
+                    onValueChange={v => setFormData(f => ({ ...f, project_id: v, milestone_id: '' }))}
+                  >
                     <SelectTrigger><SelectValue placeholder="Select project" /></SelectTrigger>
                     <SelectContent>
                       {projects.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
@@ -252,6 +281,27 @@ export function Payments() {
                   </Select>
                 </div>
               </div>
+              {selectedProject?.payment_structure === 'Milestones' && (
+                <div className="space-y-2">
+                  <Label>Milestone (Optional)</Label>
+                  <Select
+                    value={formData.milestone_id}
+                    onValueChange={v => setFormData(f => ({ ...f, milestone_id: v }))}
+                    disabled={!formData.project_id || projectMilestones.length === 0}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={projectMilestones.length ? 'Select milestone' : 'No milestones found'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {projectMilestones.map(milestone => (
+                        <SelectItem key={milestone.id} value={milestone.id}>
+                          {milestone.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Amount Paid ({getCurrencySymbol()})</Label>
@@ -352,6 +402,10 @@ export function Payments() {
                   <p className="text-xs text-muted-foreground">Reference</p>
                   <p className="font-medium">{viewPayment.reference || '-'}</p>
                 </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Milestone</p>
+                  <p className="font-medium">{getMilestoneTitle(viewPayment.milestone_id)}</p>
+                </div>
                 <div className="sm:col-span-2">
                   <p className="text-xs text-muted-foreground">Recorded By</p>
                   <p className="font-medium">{viewPayment.recorded_by || '-'}</p>
@@ -417,6 +471,7 @@ export function Payments() {
                   <th>Date</th>
                   <th>Contractor</th>
                   <th>Project</th>
+                  <th>Milestone</th>
                   <th>Amount</th>
                   <th>Method</th>
                   <th>Reference</th>
@@ -429,6 +484,7 @@ export function Payments() {
                     <td>{format(new Date(payment.payment_date), 'MMM d, yyyy')}</td>
                     <td className="font-medium">{getContractorName(payment.contractor_id)}</td>
                     <td>{getProjectName(payment.project_id)}</td>
+                    <td className="text-muted-foreground">{getMilestoneTitle(payment.milestone_id)}</td>
                     <td className="font-semibold text-primary">{formatCurrency(payment.amount_paid)}</td>
                     <td>{payment.payment_method}</td>
                     <td className="text-muted-foreground">{payment.reference || '-'}</td>
@@ -471,6 +527,9 @@ export function Payments() {
                 <div className="flex items-center gap-2 text-sm">
                   <Building className="w-4 h-4 text-muted-foreground" />
                   <span>{getProjectName(payment.project_id)}</span>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Milestone: {getMilestoneTitle(payment.milestone_id)}
                 </div>
                 <div className="flex items-center justify-between pt-2 border-t border-border">
                   <div className="text-sm">
