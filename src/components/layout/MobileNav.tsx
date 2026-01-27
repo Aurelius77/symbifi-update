@@ -18,6 +18,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { useInstallPrompt } from '@/hooks/useInstallPrompt';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -38,6 +39,7 @@ export function MobileNav() {
   const location = useLocation();
   const { signOut } = useAuth();
   const { profile } = useUserProfile();
+  const { canInstall, promptInstall } = useInstallPrompt();
 
   const handleSignOut = async () => {
     await signOut();
@@ -97,7 +99,20 @@ export function MobileNav() {
                   <span>{item.name}</span>
                 </NavLink>
               ))}
-              
+              {canInstall && (
+                <div className="pt-3">
+                  <Button
+                    variant="outline"
+                    className="w-full bg-sidebar-accent text-sidebar-foreground hover:bg-sidebar-accent/80"
+                    onClick={() => {
+                      promptInstall();
+                      setOpen(false);
+                    }}
+                  >
+                    Install Pavel
+                  </Button>
+                </div>
+              )}
             </nav>
             <div className="p-4 border-t border-sidebar-border space-y-3">
               <p className="text-xs text-sidebar-foreground/50 text-center">© 2026 Pavel</p>

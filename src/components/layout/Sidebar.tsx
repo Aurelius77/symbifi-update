@@ -52,7 +52,6 @@ export function Sidebar() {
             <item.icon className="w-5 h-5" /><span>{item.name}</span>
           </NavLink>
         ))}
-        
       </nav>
       <div className="p-4 border-t border-sidebar-border space-y-3">
         <p className="text-xs text-sidebar-foreground/50 text-center">© 2026 Pavel</p>
